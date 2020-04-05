@@ -20,6 +20,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # logux URLs
-    # TODO: не понятно, почеум не хочется работать со слешом
     path(r'logux/', include('logux.urls')),
 ]

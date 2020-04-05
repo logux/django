@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'tests.test_app',
 ]
 
 MIDDLEWARE = [
@@ -113,6 +115,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# Logux settings
+# Logux settings: https://logux.io/guide/starting/proxy-server/
 LOGUX_CONTROL_PASSWORD = "secret"
 LOGUX_URL = "http://localhost:31338"
