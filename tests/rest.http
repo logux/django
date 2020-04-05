@@ -1,0 +1,38 @@
+
+# good auth
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "secret",
+  "commands": [
+    [
+      "auth",
+      false,
+      null,
+      "oBQ39ska-eIbUN_kyzRM7"
+    ]
+  ]
+}
+
+###
+
+# bad auth
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "wrong secret",
+  "commands": [
+    [
+      "auth",
+      false,
+      null,
+      "oBQ39ska-eIbUN_kyzRM7"
+    ]
+  ]
+}
+
+###
