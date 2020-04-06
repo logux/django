@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Optional
 
 # Logux Response type: https://logux.io/protocols/backend/spec/
 # TODO: maybe this is more generic type
@@ -38,10 +38,25 @@ class LoguxAuthCommand(LoguxCommand):
 
     def apply(self):
         if self.logux_auth(self.user_id, self.credentials):
-            return [['authenticated', self.auth_id]]
+            return ['authenticated', self.auth_id]
 
-        return [['denied', self.auth_id]]
+        return ['denied', self.auth_id]
+
+
+class LoguxMeta:
+    pass
 
 
 class LoguxActionCommand(LoguxCommand):
-    pass
+
+    @abstractmethod
+    def resend(self, meta: Optional[LoguxMeta]):
+        raise NotImplemented
+
+    @abstractmethod
+    def access(self, meta: Optional[LoguxMeta]) -> bool:
+        raise NotImplemented
+
+    @abstractmethod
+    def process(self, meta: Optional[LoguxMeta]) -> None:
+        raise NotImplemented

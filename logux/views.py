@@ -5,6 +5,7 @@ from typing import List
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 
+from logux import settings
 from logux.core import LoguxCommand, LoguxAuthCommand, LoguxResponse
 from logux.settings import LOGUX_CONTROL_PASSWORD
 
@@ -38,12 +39,14 @@ class LoguxRequest:
         # TODO: rewrite it though dynamic dispatching
         for cmd in self._body['commands']:
             if cmd[0] == 'auth':
-                # TODO: inject logux auth func from consumer app
-                commands.append(LoguxAuthCommand(cmd, lambda user_id, token: True))
+                logger.debug(f'got auth cmd: {cmd}')
+                commands.append(LoguxAuthCommand(cmd, settings.LOGUX_AUTH_FUNC))
             elif cmd[0] == 'action':
                 # TODO: inject consumers dict with all actions
+                logger.debug(f'got action: {cmd}')
                 raise NotImplemented()
             else:
+                logger.error(f'wrong command type: {cmd}')
                 raise ValueError(f'wrong command type: {cmd[0]}, expected "auth" or "action"')
 
         return commands
