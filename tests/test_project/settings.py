@@ -116,5 +116,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Logux settings: https://logux.io/guide/starting/proxy-server/
+# TODO: add doc: do not use passwords in the settings, use ENV instead
 LOGUX_CONTROL_PASSWORD = "secret"
 LOGUX_URL = "http://localhost:31338"
+LOGUX_AUTH_FUNC = lambda user_id, token: True
