@@ -1,5 +1,65 @@
+#
+# List of test requests from the Logux Proxy server to the Django backend.
+# Most of them taked from doc's: https://logux.io/protocols/backend/examples/
+#
+# All of them are for the version 2
 
-# good auth
+# ###
+# Proxy Server auth: https://logux.io/protocols/backend/spec/#requests
+#
+
+# Proxy Server auth with correct secret.
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "secret",
+  "commands": []
+}
+
+###
+
+# Proxy Server auth with wrong secret.
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "wrong secret",
+  "commands": []
+}
+
+###
+
+# ###
+# Wrong command. Not Auth and not Action
+#
+
+# bad command type -> error (tests/test_project/settings.py:122)
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "secret",
+  "commands": [
+    [
+      "sup guys!",
+      "foo",
+      "bar",
+      "gf4Ygi6grYZYDH5Z2BsoR"
+    ]
+  ]
+}
+
+###
+
+# ###
+# "Auth" command: https://logux.io/protocols/backend/spec/#requests
+#
+
+# "auth" command -> authenticated (tests/test_project/settings.py:122)
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
@@ -9,28 +69,28 @@ Content-Type: application/json
   "commands": [
     [
       "auth",
-      false,
-      null,
-      "oBQ39ska-eIbUN_kyzRM7"
+      "38",
+      "good-token",
+      "gf4Ygi6grYZYDH5Z2BsoR"
     ]
   ]
 }
 
 ###
 
-# bad auth
+# "auth" command -> denied (tests/test_project/settings.py:122)
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
   "version": 2,
-  "password": "wrong secret",
+  "password": "secret",
   "commands": [
     [
       "auth",
-      false,
-      null,
-      "oBQ39ska-eIbUN_kyzRM7"
+      "38",
+      "bad-token",
+      "gf4Ygi6grYZYDH5Z2BsoR"
     ]
   ]
 }

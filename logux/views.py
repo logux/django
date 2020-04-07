@@ -23,12 +23,21 @@ class LoguxRequest:
     TODO: add ref to doc's and examples of consumer dispatcher in the test app
     """
 
+    class CommandType:
+        """ All possible Logux command types.
+        https://logux.io/protocols/backend/spec/#requests """
+        AUTH = 'auth'
+        ACTION = 'action'
+
+        choices = [AUTH, ACTION]
+
     def __init__(self, request: HttpRequest):
         if not request.body:
             raise ValueError("wrong request body")
 
         self._body = json.loads(request.body.decode('utf-8'))
 
+        # TODO: what should I do with the versions?
         self.version: str = self._body['version']
         self.password: str = self._body['password']
         self.commands: List[LoguxCommand] = self._parse_commands()
@@ -38,16 +47,24 @@ class LoguxRequest:
 
         # TODO: rewrite it though dynamic dispatching
         for cmd in self._body['commands']:
-            if cmd[0] == 'auth':
+            cmd_type = cmd[0]
+
+            if cmd_type == self.CommandType.AUTH:
                 logger.debug(f'got auth cmd: {cmd}')
                 commands.append(LoguxAuthCommand(cmd, settings.LOGUX_AUTH_FUNC))
-            elif cmd[0] == 'action':
+
+            elif cmd_type == self.CommandType.ACTION:
                 # TODO: inject consumers dict with all actions
                 logger.debug(f'got action: {cmd}')
                 raise NotImplemented()
+
             else:
                 logger.error(f'wrong command type: {cmd}')
-                raise ValueError(f'wrong command type: {cmd[0]}, expected "auth" or "action"')
+                err_msg = f'wrong command type: {cmd_type}, expected {[c_type for c_type in self.CommandType.choices]}'
+                logger.error(err_msg)
+                logger.warning(f'command with wrong type will be ignored')
+                # TODO: should I raise exception here?
+                # raise ValueError(err_msg)
 
         return commands
 
@@ -57,12 +74,16 @@ class LoguxRequest:
 
     def apply_commands(self) -> List[LoguxResponse]:
         if not self._is_server_authenticated():
+            # TODO: i should extract each cmd and eval them separately
             # TODO: more informative messages
-            # TODO: should I answer 200 or 401?
             # TODO: extract to common way to error response
             err_msg = 'Unauthorised Logux proxy server'
             logger.warning(err_msg)
             return [['error', err_msg]]
+
+        if len(self.commands) == 0:
+            return [['error', f'command list is empty']]
+
         return [cmd.apply() for cmd in self.commands]
 
 
@@ -70,13 +91,6 @@ class LoguxRequest:
 @csrf_exempt
 def dispatch(request: HttpRequest):
     """
-    {
-        "version": 2,
-        "password": "secret",
-        "commands": [
-            ["auth", false, null, "BJ9InmfJre3FfJGKC5-sy"]
-        ]
-    }
-    TODO: if ["auth", string userId, any credentials, string authId] why userId is bool?
+        TODO: if ["auth", string|bool userId, string token, string authId] why userId is bool?
     """
     return JsonResponse(LoguxRequest(request).apply_commands(), safe=False)

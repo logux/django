@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import List, Callable, Any, Optional
+from typing import List, Callable, Optional
 
 # Logux Response type: https://logux.io/protocols/backend/spec/
 # TODO: maybe this is more generic type
@@ -28,7 +28,7 @@ class LoguxAuthCommand(LoguxCommand):
     TODO: as default we may user standard Django auth method (sessions) :\
     """
 
-    def __init__(self, cmd_body: List[str], logux_auth: Callable[[int, Any], bool]):
+    def __init__(self, cmd_body: List[str], logux_auth: Callable[[str, str], bool]):
         # meh
         # TODO: validate it
         _, self.user_id, self.credentials, self.auth_id = cmd_body
@@ -49,6 +49,7 @@ class LoguxMeta:
 
 class LoguxActionCommand(LoguxCommand):
 
+    # TODO: https://logux.io/node-api/#actioncallbacks
     @abstractmethod
     def resend(self, meta: Optional[LoguxMeta]):
         raise NotImplemented

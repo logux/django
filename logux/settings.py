@@ -13,7 +13,11 @@ if LOGUX_CONTROL_PASSWORD is None:
     raise ValueError("can't get LOGUX_CONTROL_PASSWORD")
 
 # TODO: don't like it. bt for now let's say consumer should implement auth func by himself
-LOGUX_AUTH_FUNC = getattr(settings, "LOGUX_AUTH_FUNC", lambda user_id, token: False)
+LOGUX_AUTH_FUNC = getattr(settings, 'LOGUX_AUTH_FUNC', None)
+
+if LOGUX_AUTH_FUNC is None:
+    # TODO: add link to doc
+    raise ValueError('LOGUX_AUTH_FUNC is required! Set auth function in your settings.py')
 
 DEBUG = getattr(settings, 'DEBUG', True)
 

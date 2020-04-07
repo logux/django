@@ -119,4 +119,4 @@ STATIC_URL = '/static/'
 # TODO: add doc: do not use passwords in the settings, use ENV instead
 LOGUX_CONTROL_PASSWORD = "secret"
 LOGUX_URL = "http://localhost:31338"
-LOGUX_AUTH_FUNC = lambda user_id, token: True
+LOGUX_AUTH_FUNC = lambda user_id, token: token == 'good-token'
