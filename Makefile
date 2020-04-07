@@ -1,4 +1,4 @@
-.PHONY: venv install run run_logux_server run_logux_client run_all
+.PHONY: venv install run run_logux_server run_logux_client run_all test
 
 venv:
 	python3 -m venv env
@@ -16,6 +16,10 @@ run_logux_client:
 	cd ./tests/client-logux/ && yarn start
 
 run_all: run run_logux_server run_logux_client
+
+
+test:
+	source env/bin/activate && python tests/manage.py test test_app
 
 # TODO: build to dist
 #build:
