@@ -2,6 +2,8 @@ import logging
 
 from django.conf import settings
 
+from logux.utils import autodiscover
+
 # logux server URL
 DEFAULT_LOGUX_URL = 'http://localhost:31338'
 LOGUX_URL = getattr(settings, 'LOGUX_URL', DEFAULT_LOGUX_URL)
@@ -24,3 +26,6 @@ DEBUG = getattr(settings, 'DEBUG', True)
 if DEBUG:
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# import all logux_actions.py from consumer modules
+autodiscover()
