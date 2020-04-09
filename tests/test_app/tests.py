@@ -1,10 +1,9 @@
 import json
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.test import TestCase
 from django.urls import reverse
-
-from logux import settings
 
 
 class ProxyAuthTestCase(TestCase):
@@ -63,7 +62,7 @@ class WrongLoguxCommandTypeTestCase(TestCase):
     pass
 
 
-class LoguxAuthCommantTestCase(TestCase):
+class LoguxAuthCommentTestCase(TestCase):
     """ Auth command """
 
     def setUp(self) -> None:
@@ -71,7 +70,7 @@ class LoguxAuthCommantTestCase(TestCase):
         self.good_user_id = '42'
         settings.LOGUX_AUTH_FUNC = lambda user_id, token: token == self.good_token and user_id == self.good_user_id
 
-    def test_success_auth(self):
+    def test_success_auth(self) -> None:
         r: JsonResponse = json.loads(self.client.post(
             path=reverse('logux-dispatch'),
             data={
