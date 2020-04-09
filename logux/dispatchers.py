@@ -1,21 +1,45 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Dict
 
-from logux.core import LoguxActionCommand
+from logux.core import ActionCommand
+
+logger = logging.getLogger(__name__)
 
 
 class BaseActionDispatcher(ABC):
     @abstractmethod
-    def register(self, type_: str, action: LoguxActionCommand):
+    def register(self, action: ActionCommand):
         raise NotImplemented
 
 
 class DefaultActionDispatcher(BaseActionDispatcher):
     """ TODO: add Doc String """
-    _actions: Dict[LoguxActionCommand] = {}
+    _actions: Dict[str, ActionCommand] = {}
 
-    def register(self, type_: str, action: LoguxActionCommand):
-        pass
+    def __str__(self):
+        return ', '.join([k for k in self._actions])
+
+    def __getitem__(self, action_type: str):
+        return self._actions[action_type]
+
+    def _action_is_valid(self, action: ActionCommand) -> bool:
+        if not action.action_type:
+            # TODO: Add link to Doc
+            raise ValueError('`action_type` attribute is required for all Actions')
+
+        if self.has_action(action.action_type):
+            raise ValueError(f'`{action.action_type}` action type already registered')
+
+        return True
+
+    def has_action(self, action_type: str) -> bool:
+        return action_type in self._actions
+
+    def register(self, action: ActionCommand):
+        if self._action_is_valid(action):
+            logger.info(f'registering action `{action.action_type}`')
+            self._actions[action.action_type] = action
 
 
 # TODO: should be a Singleton
