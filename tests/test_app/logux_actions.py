@@ -41,7 +41,6 @@ class AddCatAction(ActionCommand):
         return ['resend', meta['id'], {'channels': [f'users/{self.action_context["user"]}']}]
 
     def access(self, meta: Optional[Meta]) -> bool:
-        print(self.action_context['user'])
         return True if self.action_context['user'] == 38 else False
 
     def process(self, meta: Optional[Meta]) -> LoguxResponse:
