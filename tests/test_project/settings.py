@@ -117,6 +117,13 @@ STATIC_URL = '/static/'
 
 # Logux settings: https://logux.io/guide/starting/proxy-server/
 # TODO: add doc: do not use passwords in the settings, use ENV instead
-LOGUX_CONTROL_PASSWORD = "secret"
+LOGUX_CONTROL_SECRET = "secret"
 LOGUX_URL = "http://localhost:31338"
-LOGUX_AUTH_FUNC = lambda user_id, token: token == 'good-token'
+
+
+# TODO: replace by auth with sessionid: https://github.com/logux/django/issues/8
+def _auth(user_id, token: str):
+    return token == 'good-token'
+
+
+LOGUX_AUTH_FUNC = _auth

@@ -7,9 +7,9 @@ DEFAULT_LOGUX_URL = 'http://localhost:31338'
 LOGUX_URL = getattr(settings, 'LOGUX_URL', DEFAULT_LOGUX_URL)
 
 # TODO: add into DOC: do not store your pass in settings.py, use ENV instead
-LOGUX_CONTROL_PASSWORD = getattr(settings, 'LOGUX_CONTROL_PASSWORD', None)
+LOGUX_CONTROL_SECRET = getattr(settings, 'LOGUX_CONTROL_SECRET', None)
 
-if LOGUX_CONTROL_PASSWORD is None:
+if LOGUX_CONTROL_SECRET is None:
     raise ValueError("can't get LOGUX_CONTROL_PASSWORD")
 
 # TODO: don't like it. bt for now let's say consumer should implement auth func by himself
