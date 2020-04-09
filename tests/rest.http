@@ -96,3 +96,44 @@ Content-Type: application/json
 }
 
 ###
+
+# ###
+# "Action" command: https://logux.io/protocols/backend/spec/#requests
+#
+
+# "action" command -> authenticated (tests/test_project/settings.py:122)
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "secret",
+  "commands": [
+    [
+      "action",
+      {
+        "type": "user/rename",
+        "user": 38,
+        "name": "New"
+      },
+      {
+        "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+        "time": 1560954012838
+      }
+    ],
+    [
+      "action",
+      {
+        "type": "user/rename",
+        "user": 21,
+        "name": "New"
+      },
+      {
+        "id": "1560954012900 38:Y7bysd:O0ETfc 1",
+        "time": 1560954012900
+      }
+    ]
+  ]
+}
+
+###
