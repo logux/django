@@ -137,3 +137,28 @@ Content-Type: application/json
 }
 
 ###
+
+# "action" command -> unknownAction
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 2,
+  "password": "secret",
+  "commands": [
+    [
+      "action",
+      {
+        "type": "user/unknown",
+        "user": 38,
+        "name": "New"
+      },
+      {
+        "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+        "time": 1560954012838
+      }
+    ]
+  ]
+}
+
+###

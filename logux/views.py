@@ -7,7 +7,7 @@ from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 
 from logux import settings
-from logux.core import Command, AuthCommand, LoguxResponse
+from logux.core import Command, AuthCommand, LoguxResponse, UnknownAction
 from logux.dispatchers import actions
 from logux.settings import LOGUX_CONTROL_SECRET
 
@@ -56,7 +56,8 @@ class LoguxRequest:
                 action_type = cmd[1]['type']
 
                 if not actions.has_action(action_type):
-                    logger.error(f'wrong action type: {action_type}')
+                    logger.error(f'unknown action: {action_type}')
+                    commands.append(UnknownAction(cmd))
                     continue
 
                 commands.append(actions[action_type](cmd))

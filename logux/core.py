@@ -94,3 +94,15 @@ class ActionCommand(Command):
     def process(self, meta: Optional[Meta]) -> LoguxResponse:
         """ TODO: add docs """
         return []
+
+
+class UnknownAction(ActionCommand):
+    """ Action for generation `unknownAction` error.
+    Will be used and evaluated if actions dispatcher
+    got unexpected action type """
+
+    def access(self, meta: Optional[Meta]) -> bool:
+        return False
+
+    def apply(self) -> List[LoguxResponse]:
+        return [['unknownAction', self.meta['id']]]

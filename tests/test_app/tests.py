@@ -62,7 +62,7 @@ class WrongLoguxCommandTypeTestCase(TestCase):
     pass
 
 
-class LoguxAuthCommentTestCase(TestCase):
+class LoguxAuthCommandTestCase(TestCase):
     """ Auth command """
 
     def setUp(self) -> None:
@@ -111,3 +111,32 @@ class LoguxAuthCommentTestCase(TestCase):
 
         self.assertEqual(r[0][0], 'denied')
         self.assertEqual(r[0][1], 'gf4Ygi6grYZYDH5Z2BsoR')
+
+
+class LoguxServerErrorsTestCase(TestCase):
+
+    def test_unknown_action(self):
+        r: JsonResponse = json.loads(self.client.post(
+            path=reverse('logux-dispatch'),
+            data={
+                "version": 2,
+                "password": "secret",
+                "commands": [
+                    [
+                        "action",
+                        {
+                            "type": "user/unknown",
+                            "user": 38,
+                            "name": "New"
+                        },
+                        {
+                            "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                            "time": 1560954012838
+                        }
+                    ]
+                ]
+            },
+            content_type='application/json'
+        ).content.decode('utf-8'))
+
+        self.assertEqual(r[0], ['unknownAction', '1560954012838 38:Y7bysd:O0ETfc 0'])
