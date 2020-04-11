@@ -1,10 +1,13 @@
 import json
-from typing import Dict, Any
+from datetime import datetime
+from typing import Dict, Any, Optional
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.test import TestCase
 from django.urls import reverse
+
+from logux.core import ActionCommand, Meta
 
 
 class LoguxTestCase(TestCase):
@@ -64,6 +67,34 @@ class WrongLoguxCommandTypeTestCase(TestCase):
     """ Handling non allowed Logux command types """
     # TODO: first I need figure out: should I raise an exceptions for wrong cmd types
     pass
+
+
+class LoguxActionCommandTestCase(LoguxTestCase):
+    def test_property_getters(self):
+        """ Tests for Action helpers """
+
+        class TestActionCommand(ActionCommand):
+
+            def access(self, meta: Optional[Meta]) -> bool:
+                return True
+
+        action = TestActionCommand([
+            'action',
+            {'type': 'user/rename', 'user': 38, 'name': 'New'},
+            {'id': "1560954012838 38:Y7bysd:O0ETfc 0", 'time': 1560954012838}
+        ])
+
+        self.assertEqual(action.user_id, '38')
+        self.assertEqual(action.client_id, '38:Y7bysd')
+        self.assertEqual(action.node_id, 'O0ETfc')
+        self.assertEqual(action.time, datetime.fromtimestamp(1560954012838 / 1e3))
+
+        action_without_node_id = TestActionCommand([
+            'action',
+            {'type': 'user/rename', 'user': 38, 'name': 'New'},
+            {'id': "1560954012838 38:Y7bysd 0", 'time': 1560954012838}
+        ])
+        self.assertIsNone(action_without_node_id.node_id)
 
 
 class LoguxAuthCommandTestCase(LoguxTestCase):

@@ -1,5 +1,6 @@
 import logging
 from abc import abstractmethod, ABC
+from datetime import datetime
 from typing import List, Callable, Optional, Dict
 
 # Logux Response type: https://logux.io/protocols/backend/spec/
@@ -46,6 +47,10 @@ class AuthCommand(Command):
             if self.logux_auth(self.user_id, self.token) \
             else [['denied', self.auth_id]]
 
+    def add(self) -> None:
+        # https://github.com/logux/django/issues/12
+        raise NotImplemented()
+
 
 class ActionCommand(Command):
     """
@@ -57,6 +62,11 @@ class ActionCommand(Command):
     #  ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: Optional[str] = None
 
+    # TODO: add helpers into self
+    #  user_id, client_id, node_id, time(datatime),
+    #  date_diff (https://github.com/logux/core/blob/master/is-first-older/index.js) ???
+    #  send_back, undo.
+
     def __init__(self, cmd_body: List[ActionContext]):
         """ cmd_body should looks like:
             [
@@ -65,12 +75,63 @@ class ActionCommand(Command):
               { id: "1560954012838 38:Y7bysd:O0ETfc 0", time: 1560954012838 }   // cmd_body[2]
             ]
         """
-        self.action_context: ActionContext = cmd_body[1]
+        self.action: ActionContext = cmd_body[1]
         self.meta: Meta = cmd_body[2]
 
-    # noinspection PyMethodMayBeStatic
-    def _finally(self) -> LoguxResponse:
-        # TODO: Add doc's: why you may need this method?
+    # Helpers
+    @property
+    def _uid(self):
+        return self.meta['id'].split(' ')[1].split(':')
+
+    @property
+    def user_id(self) -> str:
+        """ Get user id from mata.id.
+         For example, if meta.id is '1560954012838 38:Y7bysd:O0ETfc 0',
+         then user_id is '38'
+         """
+        return self._uid[0]
+
+    @property
+    def client_id(self) -> str:
+        """ Get client id from mata.id.
+         For example, if meta.id is '1560954012838 38:Y7bysd:O0ETfc 0',
+         then client_id is '38:Y7bysd'
+         """
+        return ':'.join(self._uid[:2])
+
+    @property
+    def node_id(self) -> Optional[str]:
+        """ Get node id from mata.id if exist.
+         For example, if meta.id is '1560954012838 38:Y7bysd:O0ETfc 0',
+         then client_id is 'O0ETfc'
+
+         If UID does not contain node_id None will be returned
+         """
+        return self._uid[-1] if len(self._uid) == 3 else None
+
+    @property
+    def time(self) -> datetime:
+        """
+        Get time from mata in Python datetime type.
+         For example, if meta is {'id': "1560954012838 38:Y7bysd 0", 'time': 1560954012838},
+         then time is 'datetime.datetime(2019, 6, 20, 0, 20, 12, 838000)'
+        """
+        return datetime.fromtimestamp(int(self.meta['time']) / 1e3)
+
+    @property
+    def date_diff(self):
+        pass
+
+    def send_back(self):
+        pass
+
+    def undo(self):
+        pass
+
+    # Required and optional action methods
+    def _finally(self) -> LoguxResponse:  # noqa
+        # TODO: rewrite
+        """ Callback which will be run on the end of action/subscription processing or on an error """
         return []
 
     def apply(self) -> List[LoguxResponse]:
