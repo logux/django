@@ -84,17 +84,27 @@ class LoguxActionCommandTestCase(LoguxTestCase):
             {'id': "1560954012838 38:Y7bysd:O0ETfc 0", 'time': 1560954012838}
         ])
 
-        self.assertEqual(action.user_id, '38')
-        self.assertEqual(action.client_id, '38:Y7bysd')
-        self.assertEqual(action.node_id, 'O0ETfc')
-        self.assertEqual(action.time, datetime.fromtimestamp(1560954012838 / 1e3))
+        self.assertEqual(action.meta.user_id, '38')
+        self.assertEqual(action.meta.client_id, '38:Y7bysd')
+        self.assertEqual(action.meta.node_id, 'O0ETfc')
+        self.assertEqual(action.meta.time, datetime.fromtimestamp(1560954012838 / 1e3))
 
         action_without_node_id = TestActionCommand([
             'action',
             {'type': 'user/rename', 'user': 38, 'name': 'New'},
             {'id': "1560954012838 38:Y7bysd 0", 'time': 1560954012838}
         ])
-        self.assertIsNone(action_without_node_id.node_id)
+        self.assertIsNone(action_without_node_id.meta.node_id)
+
+    def test_meta_cmp(self):
+        """ Tests for meta compering """
+        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': 1560954012838})  # '2019-06-20 00:20:12.838000'
+        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 1', 'time': 1560954012848})  # '2019-06-20 00:20:12.848000'
+
+        self.assertTrue(m1 < m2)
+        self.assertTrue(m1 != m2)
+        self.assertFalse(m1 > m2)
+        self.assertFalse(m1 == m2)
 
 
 class LoguxAuthCommandTestCase(LoguxTestCase):
