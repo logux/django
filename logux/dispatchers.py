@@ -25,11 +25,13 @@ class DefaultActionDispatcher(BaseActionDispatcher):
 
     def _action_is_valid(self, action: ActionCommand) -> bool:
         if not action.action_type:
-            # TODO: Add link to Doc
             raise ValueError('`action_type` attribute is required for all Actions')
 
         if self.has_action(action.action_type):
             raise ValueError(f'`{action.action_type}` action type already registered')
+
+        if getattr(action.access, '__isabstractmethod__', False):
+            raise ValueError(f'`access` method is required')
 
         return True
 
@@ -42,7 +44,8 @@ class DefaultActionDispatcher(BaseActionDispatcher):
             self._actions[action.action_type] = action
 
 
-# TODO: should be a Singleton
+# TODO: maybe rename? maybe all actions and all subscriptions need be here? 🤔🤔🤔
+#  looks like, subscriptions are almost the same as actions.
 actions = DefaultActionDispatcher()
 
 __all__ = ['actions']
