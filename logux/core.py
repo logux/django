@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod, ABC
+from copy import deepcopy
 from datetime import datetime
 from typing import List, Callable, Optional, Dict
 
@@ -26,6 +27,8 @@ class Meta:
     def __init__(self, raw_meta: Dict[str, str]):
         # Take raw meta and parse all required to properties
         self._raw_meta = raw_meta
+        # Keep in mind, if self._raw_meta will change all properties do not be reassignment,
+        #   so, do not change self._raw_meta during Meta instance lifecycle
 
         self._uid: List[str] = self._get_uid()
 
@@ -194,6 +197,16 @@ class ActionCommand(Command):
         """
         self._action: Action = cmd_body[1]
         self._meta: Meta = Meta(cmd_body[2])
+
+    @property
+    def action(self):
+        # do not change internal action state from outside
+        return deepcopy(self._action)
+
+    @property
+    def meta(self):
+        # do not change internal meta state from outside
+        return deepcopy(self._meta)
 
     def send_back(self):
         raise NotImplemented()

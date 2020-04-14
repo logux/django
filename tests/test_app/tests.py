@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.test import TestCase
 from django.urls import reverse
 
-from logux.core import ActionCommand, Meta
+from logux.core import ActionCommand, Meta, Action
 
 
 class LoguxTestCase(TestCase):
@@ -75,7 +75,7 @@ class LoguxActionCommandTestCase(LoguxTestCase):
 
         class TestActionCommand(ActionCommand):
 
-            def access(self, meta: Optional[Meta]) -> bool:
+            def access(self, a: Action, m: Optional[Meta]) -> bool:
                 return True
 
         action = TestActionCommand([
@@ -94,7 +94,7 @@ class LoguxActionCommandTestCase(LoguxTestCase):
             {'type': 'user/rename', 'user': 38, 'name': 'New'},
             {'id': "1560954012838 38:Y7bysd 0", 'time': 1560954012838}
         ])
-        self.assertIsNone(action_without_node_id.meta.node_id)
+        self.assertIsNone(action_without_node_id._meta.node_id)
 
     def test_meta_cmp(self):
         """ Tests for meta compering """
