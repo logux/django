@@ -7,11 +7,14 @@ from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 
 from logux import settings
-from logux.core import Command, AuthCommand, LoguxResponse, UnknownAction
+from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command
 from logux.dispatchers import actions
 from logux.settings import LOGUX_CONTROL_SECRET
 
 logger = logging.getLogger(__name__)
+
+# https://logux.io/protocols/backend/examples/#subscription
+LOGUX_SUBSCRIBE = 'logux/subscribe'
 
 
 class LoguxRequest:
@@ -23,6 +26,10 @@ class LoguxRequest:
     injection). Other Action should by parsed by consumer dispatcher.
 
     TODO: add ref to doc's and examples of consumer dispatcher in the test app
+
+    TODO: send 403 if proxy secret is wrong
+    TODO: send 429 if brute force check is fail
+    TODO: send 500 and stacktrace if dispatcher gonna down
     """
 
     class CommandType:
@@ -55,6 +62,13 @@ class LoguxRequest:
                 logger.debug(f'got action: {cmd}')
                 action_type = cmd[1]['type']
 
+                # subscribe actions
+                if action_type == LOGUX_SUBSCRIBE:
+                    # TODO: try to find particular action handler by `channel` pattern?
+                    #  and add sub action into all actions like regular command
+                    pass
+
+                # custom actions
                 if not actions.has_action(action_type):
                     logger.error(f'unknown action: {action_type}')
                     commands.append(UnknownAction(cmd))
@@ -84,14 +98,22 @@ class LoguxRequest:
         if len(self.commands) == 0:
             return [['error', f'command list is empty']]
 
-        return filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands]))
+        # TODO: is it correct behavior? Or I should send error message immediately by send_back or add?
+        res: List[LoguxResponse] = []
+        for cmd in self.commands:
+            try:
+                res.append(cmd.apply())
+            except Exception as err:
+                logger.error(f'fail during command applying: f{err}')
+                action_meta = cmd.get_meta()
+                # TODO: what if I can't got META?
+                res.append(['error', action_meta.id if action_meta else '', f'{err}'])
+
+        return filter(None, chain.from_iterable(res))
 
 
 @csrf_exempt
 def dispatch(request: HttpRequest):
-    """
-        TODO: if ["auth", string|bool userId, string token, string authId] why userId is bool?
-    """
     commands_results = list(LoguxRequest(request).apply_commands())
     for cmd_res in commands_results:
         logger.debug(cmd_res)

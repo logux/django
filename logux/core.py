@@ -143,6 +143,12 @@ class Command(ABC):
             # TODO: just write it in the log
             raise ValueError('Bad Request to Logux (add)')
 
+    def get_meta(self) -> Optional[Meta]:
+        if isinstance(self, (ActionCommand,)):
+            return self.meta
+
+        return None
+
 
 class AuthCommand(Command):
     """ Logux Auth Command provide way to check is the User authenticated.
@@ -214,20 +220,11 @@ class ActionCommand(Command):
     def undo(self):
         raise NotImplemented()
 
-    # Required and optional action methods
+    # Required and optional action methods (this methods should be implemented by consumer
     def _finally(self) -> LoguxResponse:  # noqa
         # TODO: rewrite
         """ Callback which will be run on the end of action/subscription processing or on an error """
         return []
-
-    def apply(self) -> List[LoguxResponse]:
-        # https://github.com/logux/django/issues/5
-        return [
-            self.resend(self._action, self._meta),
-            ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
-            self.process(self._action, self._meta) if self.access(self._action, self._meta) else [],
-            self._finally()
-        ]
 
     @abstractmethod
     def access(self, action: Action, meta: Optional[Meta]) -> bool:
@@ -241,6 +238,25 @@ class ActionCommand(Command):
     def process(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
         """ TODO: add docs """
         return []
+
+    # Required for Command
+    def apply(self) -> List[LoguxResponse]:
+        # https://github.com/logux/django/issues/5
+        return [
+            self.resend(self._action, self._meta),
+            ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
+            self.process(self._action, self._meta) if self.access(self._action, self._meta) else [],
+            self._finally()
+        ]
+
+
+class ChannelCommand(ActionCommand):
+    """ Todo: add docs: https://logux.io/protocols/backend/examples/#subscription
+
+    This class looks exactly like ActionCommand, but with few additional features.
+    So, maybe it may be a Mixin
+    """
+    pass
 
 
 class UnknownAction(ActionCommand):
