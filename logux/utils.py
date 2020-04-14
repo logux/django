@@ -16,5 +16,5 @@ def autodiscover():
     if _autodiscovered:
         return
 
-    autodiscover_modules('logux_actions')
+    autodiscover_modules('logux_actions', 'logux_subscriptions')
     _autodiscovered = True
