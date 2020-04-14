@@ -1,6 +1,8 @@
 from typing import Optional
 
-from logux.core import ActionCommand, Meta, LoguxResponse
+from django.contrib.auth.models import User
+
+from logux.core import ActionCommand, Meta, LoguxResponse, Action
 from logux.dispatchers import actions
 
 
@@ -37,17 +39,24 @@ class AddCatAction(ActionCommand):
     """
     action_type = 'user/rename'
 
-    def resend(self, meta: Optional[Meta]) -> LoguxResponse:
-        return ['resend', meta['id'], {'channels': [f'users/{self.action_context["user"]}']}]
+    def resend(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
+        return ['resend', meta.id, {'channels': [f'users/{action["user"]}']}]
 
-    def access(self, meta: Optional[Meta]) -> bool:
-        return True if self.action_context['user'] == 38 else False
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
+        # user can rename only himself
+        return action['user'] == int(meta.user_id)
 
-    def process(self, meta: Optional[Meta]) -> LoguxResponse:
-        # doing some staff
-        # ...
-        # TODO: add here real model update with Exceptions handling
-        return ['processed', meta['id']]
+    def process(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
+        try:
+            user = User.objects.get(pk=action['user'])
+            user.first_name = action['name']
+            user.save()
+        except User.DoesNotExist as err:
+            # TODO: waiting for undo implementation
+            # self.undo()
+            return ['error', meta.id, f'{err}']
+
+        return ['processed', meta.id]
 
 
 actions.register(AddCatAction)

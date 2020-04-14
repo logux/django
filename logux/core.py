@@ -5,10 +5,12 @@ from abc import abstractmethod, ABC
 from datetime import datetime
 from typing import List, Callable, Optional, Dict
 
-# Logux Response type: https://logux.io/protocols/backend/spec/
-# TODO: add examples from spec
+import requests
+from django.conf import settings
+from django.urls import reverse
+
 LoguxResponse = LoguxRequest = List[str]
-ActionContext = Dict[str, str]
+Action = Dict[str, str]
 logger = logging.getLogger(__name__)
 
 
@@ -106,6 +108,38 @@ class Command(ABC):
     def apply(self) -> LoguxResponse:
         raise NotImplemented()
 
+    @staticmethod
+    def add(action: Dict, meta: Optional[Meta] = None) -> None:
+        # https://logux.io/node-api/#log-add
+        # https://github.com/logux/core/blob/36c604158b49697790e96c6e6919c22752e231cb/log/index.js#L29
+        #
+        # The doc's says:
+        #   It will set id, time (if they was missed) and added property to meta and call all listeners.
+        # Where we should take id and time? Should we generate it somehow, or it is always meta from already
+        # existed action?
+
+        if meta is None:
+            # TODO: deal with meta generating
+            raise ValueError('for now meta is required!')
+
+        data = {
+            # TODO: deal with versions
+            "version": 3,
+            "password": settings.LOGUX_CONTROL_SECRET,
+            "commands": [
+                "action",
+                action,
+                meta
+            ]
+        }
+        logger.debug(f'add action {action} with meta {meta} to Log')
+        r = requests.post(reverse('logux-dispatch'), data=data)
+        logger.debug(f'response: {r.text}')
+
+        if r.status_code != requests.codes['200']:
+            # TODO: just write it in the log
+            raise ValueError('Bad Request to Logux (add)')
+
 
 class AuthCommand(Command):
     """ Logux Auth Command provide way to check is the User authenticated.
@@ -134,16 +168,12 @@ class AuthCommand(Command):
             if self.logux_auth(self.user_id, self.token) \
             else [['denied', self.auth_id]]
 
-    def add(self) -> None:
-        # https://github.com/logux/django/issues/12
-        raise NotImplemented()
-
 
 class ActionCommand(Command):
     """
         TODO:
          - [ ] add Doc string
-         - [ ] add meta helpers
+         - [x] add meta helpers
     """
     # Required field, if the `action_type` property does not defined DefaultActionDispatcher will raise
     #  ValueError('`action_type` attribute is required for all Actions') Exception
@@ -154,7 +184,7 @@ class ActionCommand(Command):
     #  date_diff (https://github.com/logux/core/blob/master/is-first-older/index.js) ???
     #  send_back, undo.
 
-    def __init__(self, cmd_body: List[ActionContext]):
+    def __init__(self, cmd_body: List[Action]):
         """ cmd_body should looks like:
             [
               "action",                                                         // action_type
@@ -162,8 +192,8 @@ class ActionCommand(Command):
               { id: "1560954012838 38:Y7bysd:O0ETfc 0", time: 1560954012838 }   // cmd_body[2]
             ]
         """
-        self.action: ActionContext = cmd_body[1]
-        self.meta: Meta = Meta(cmd_body[2])
+        self._action: Action = cmd_body[1]
+        self._meta: Meta = Meta(cmd_body[2])
 
     def send_back(self):
         raise NotImplemented()
@@ -180,22 +210,22 @@ class ActionCommand(Command):
     def apply(self) -> List[LoguxResponse]:
         # https://github.com/logux/django/issues/5
         return [
-            self.resend(self.meta),
-            ["approved", self.meta.id] if self.access(self.meta) else ['denied', self.meta.id],
-            self.process(self.meta) if self.access(self.meta) else [],
+            self.resend(self._action, self._meta),
+            ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
+            self.process(self._action, self._meta) if self.access(self._action, self._meta) else [],
             self._finally()
         ]
 
     @abstractmethod
-    def access(self, meta: Optional[Meta]) -> bool:
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
         """ TODO: add docs """
         raise NotImplemented()
 
-    def resend(self, meta: Optional[Meta]) -> LoguxResponse:
+    def resend(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
         """ TODO: add docs """
         return []
 
-    def process(self, meta: Optional[Meta]) -> LoguxResponse:
+    def process(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
         """ TODO: add docs """
         return []
 
@@ -205,8 +235,8 @@ class UnknownAction(ActionCommand):
     Will be used and evaluated if actions dispatcher
     got unexpected action type """
 
-    def access(self, meta: Optional[Meta]) -> bool:
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return False
 
     def apply(self) -> List[LoguxResponse]:
-        return [['unknownAction', self.meta.id]]
+        return [['unknownAction', self._meta.id]]
