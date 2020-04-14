@@ -16,6 +16,9 @@ class Meta:
     """ Logux meta: https://logux.io/guide/concepts/meta/
     TODO: add docs about comp:
         https://github.com/logux/django/issues/12#issuecomment-612394901
+
+    TODO: Comparing method implements according Node API:
+      https://github.com/logux/core/blob/master/is-first-older/index.js
     """
 
     def __init__(self, raw_meta: Dict[str, str]):
@@ -43,7 +46,7 @@ class Meta:
     def __lt__(self, other: Meta) -> bool:
         return self.time < other.time
 
-    def __le__(self, other: Meta):
+    def __le__(self, other: Meta) -> bool:
         return self.time <= other.time
 
     def __gt__(self, other: Meta) -> bool:
@@ -162,17 +165,11 @@ class ActionCommand(Command):
         self.action: ActionContext = cmd_body[1]
         self.meta: Meta = Meta(cmd_body[2])
 
-    def date_diff(self):
-        raise NotImplemented()
-        pass
-
     def send_back(self):
         raise NotImplemented()
-        pass
 
     def undo(self):
         raise NotImplemented()
-        pass
 
     # Required and optional action methods
     def _finally(self) -> LoguxResponse:  # noqa
