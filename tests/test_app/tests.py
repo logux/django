@@ -202,3 +202,7 @@ class LoguxServerErrorsTestCase(LoguxTestCase):
         })
 
         self.assertEqual(r[0], ['unknownAction', '1560954012838 38:Y7bysd:O0ETfc 0'])
+
+
+class LoguxSubscriptionTestCase(LoguxTestCase):
+    pass

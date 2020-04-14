@@ -162,3 +162,30 @@ Content-Type: application/json
 }
 
 ###
+
+###
+
+# "action" command -> subscriptions
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 1,
+  "password": "secret",
+  "commands": [
+    [
+      "action",
+      {
+        "type": "logux/subscribe",
+        "channel": "user/38"
+      },
+      {
+        "id": "1560954012858 38:Y7bysd:O0ETfc 0",
+        "time": 1560954012858
+      }
+    ]
+  ]
+}
+
+###
+
