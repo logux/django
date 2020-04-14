@@ -1,8 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Union, Type
 
-from logux.core import ActionCommand
+from logux.core import ActionCommand, SubscriptionCommand, UnknownAction
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,52 @@ class DefaultActionDispatcher(BaseActionDispatcher):
             self._actions[action.action_type] = action
 
 
+class DefaultSubscriptionDispatcher(BaseActionDispatcher):
+    """ TODO: Add Doc String """
+
+    _subs: Dict[str, SubscriptionCommand] = {}
+
+    def __str__(self):
+        return ', '.join([k for k in self._subs])
+
+    def __getitem__(self, item: str) -> Union[SubscriptionCommand, Type[UnknownAction]]:
+        for sub in self._subs.values():
+            if sub.is_match(channel=item):
+                return sub
+
+        logger.warning(f"can't match channel name: {item}. tried these URL patterns: "
+                       f"{self}")
+
+        # TODO: should it be UnknownSubscription?
+        return UnknownAction
+
+    def has_subscription(self, channel_pattern: str) -> bool:
+        return channel_pattern in self._subs
+
+    def _sub_is_valid(self, sub) -> bool:
+        if not sub.channel_pattern:
+            raise ValueError('`action_type` attribute is required for all Actions')
+
+        if self.has_subscription(sub.channel_pattern):
+            raise ValueError(f'subscription for channel `{sub.channel_pattern}` already registered')
+
+        if getattr(sub.access, '__isabstractmethod__', False):
+            raise ValueError(f'`access` method is required')
+
+        if getattr(sub.load, '__isabstractmethod__', False):
+            raise ValueError(f'`load` method is required')
+
+        return True
+
+    def register(self, sub: SubscriptionCommand):
+        if self._sub_is_valid(sub):
+            logger.info(f'registering subscription for `{sub.channel_pattern}`')
+            self._subs[sub.channel_pattern] = sub
+
+
 # TODO: maybe rename? maybe all actions and all subscriptions need be here? 🤔🤔🤔
 #  looks like, subscriptions are almost the same as actions.
 actions = DefaultActionDispatcher()
+subscriptions = DefaultSubscriptionDispatcher()
 
-__all__ = ['actions']
+__all__ = ['actions', 'subscriptions']

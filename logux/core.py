@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
@@ -8,11 +10,13 @@ from typing import List, Callable, Optional, Dict
 
 import requests
 from django.conf import settings
-from django.urls import reverse
 
 LoguxResponse = LoguxRequest = List[str]
 Action = Dict[str, str]
 logger = logging.getLogger(__name__)
+
+# https://logux.io/protocols/backend/examples/#subscription
+LOGUX_SUBSCRIBE = 'logux/subscribe'
 
 
 class Meta:
@@ -99,6 +103,12 @@ class Meta:
         """
         return datetime.fromtimestamp(int(self._raw_meta['time']) / 1e3)
 
+    def get_raw_meta(self) -> Dict:
+        return deepcopy(self._raw_meta)
+
+    def get_json(self) -> str:
+        return json.dumps(self._raw_meta)  # , ensure_ascii=False).encode('utf8')
+
 
 class Command(ABC):
     """ Logux Command abstract class.
@@ -127,21 +137,25 @@ class Command(ABC):
 
         data = {
             # TODO: deal with versions
-            "version": 3,
+            "version": 2,
             "password": settings.LOGUX_CONTROL_SECRET,
             "commands": [
-                "action",
-                action,
-                meta
+                ["action",
+                 action,
+                 meta.get_raw_meta()]
             ]
         }
-        logger.debug(f'add action {action} with meta {meta} to Log')
-        r = requests.post(reverse('logux-dispatch'), data=data)
-        logger.debug(f'response: {r.text}')
 
-        if r.status_code != requests.codes['200']:
-            # TODO: just write it in the log
-            raise ValueError('Bad Request to Logux (add)')
+        # TODO: clean up this mess. catch all possible errors, and add some logs messages
+        logger.debug(f'add action {action} with meta {meta.get_raw_meta()} to Log')
+        try:
+            r = requests.post(url=settings.LOGUX_URL, json=data)
+            logger.debug(f'response: {r.text}')
+            if r.status_code != 200:
+                # TODO: just write it in the log
+                raise ValueError(f'Bad Request to Logux (add): {r.text}')
+        except ConnectionError as err:
+            pass
 
     def get_meta(self) -> Optional[Meta]:
         if isinstance(self, (ActionCommand,)):
@@ -214,8 +228,18 @@ class ActionCommand(Command):
         # do not change internal meta state from outside
         return deepcopy(self._meta)
 
-    def send_back(self):
-        raise NotImplemented()
+    def send_back(self, action: Action, raw_meta: Optional[Dict] = None):
+        # if `raw_meta` contain `id`, `time` or `clients` the original data will be overwritten
+        raw_meta = {} if raw_meta is None else raw_meta
+        meta = Meta(
+            {
+                'id': self.meta.id,
+                'time': self._meta['time'],
+                'clients': [self.meta.client_id],
+                **raw_meta
+            }
+        )
+        self.add(action, meta)
 
     def undo(self):
         raise NotImplemented()
@@ -242,6 +266,7 @@ class ActionCommand(Command):
     # Required for Command
     def apply(self) -> List[LoguxResponse]:
         # https://github.com/logux/django/issues/5
+        # TODO: do not eval access few times
         return [
             self.resend(self._action, self._meta),
             ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
@@ -250,13 +275,46 @@ class ActionCommand(Command):
         ]
 
 
-class ChannelCommand(ActionCommand):
+class SubscriptionCommand(ActionCommand):
     """ Todo: add docs: https://logux.io/protocols/backend/examples/#subscription
 
     This class looks exactly like ActionCommand, but with few additional features.
     So, maybe it may be a Mixin
+
+    [
+      "action",
+      { type: 'logux/subscribe', channel: '38/name' },
+      { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
+    ]
+
     """
-    pass
+    # Required field, if the `channel_pattern` property does not defined DefaultSubscriptionsDispatcher will raise
+    #  ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
+    action_type = LOGUX_SUBSCRIBE
+    channel_pattern: Optional[str] = None
+
+    def __init__(self, cmd_body: List[Action]):
+        super().__init__(cmd_body)
+        self.channel = cmd_body[1]['channel']
+        self.params = self._parse_params()
+
+    def _parse_params(self) -> Dict:
+        return re.match(self.channel_pattern, self.channel).groupdict()
+
+    @classmethod
+    def is_match(cls, channel: str) -> bool:
+        return True if re.match(cls.channel_pattern, channel) else None
+
+    @abstractmethod
+    def load(self, action: Action, meta: Meta):
+        pass
+
+    def apply(self) -> List[LoguxResponse]:
+        # TODO: do not eval access few times
+        return [
+            ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
+            self.load(self._action, self._meta) if self.access(self._action, self._meta) else []
+        ]
 
 
 class UnknownAction(ActionCommand):

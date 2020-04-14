@@ -7,14 +7,11 @@ from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 
 from logux import settings
-from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command
-from logux.dispatchers import actions
+from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command, LOGUX_SUBSCRIBE
+from logux.dispatchers import actions, subscriptions
 from logux.settings import LOGUX_CONTROL_SECRET
 
 logger = logging.getLogger(__name__)
-
-# https://logux.io/protocols/backend/examples/#subscription
-LOGUX_SUBSCRIBE = 'logux/subscribe'
 
 
 class LoguxRequest:
@@ -66,7 +63,10 @@ class LoguxRequest:
                 if action_type == LOGUX_SUBSCRIBE:
                     # TODO: try to find particular action handler by `channel` pattern?
                     #  and add sub action into all actions like regular command
-                    pass
+                    channel = cmd[1]["channel"]
+                    logger.debug(f'got subscription for channel: {channel}')
+                    commands.append(subscriptions[channel](cmd))
+                    continue
 
                 # custom actions
                 if not actions.has_action(action_type):
