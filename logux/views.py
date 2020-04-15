@@ -104,10 +104,10 @@ class LoguxRequest:
             try:
                 res.append(cmd.apply())
             except Exception as err:
-                logger.error(f'fail during command applying: f{err}')
+                logger.error(f'fail during command applying: {err}')
                 action_meta = cmd.get_meta()
                 # TODO: what if I can't got META?
-                res.append(['error', action_meta.id if action_meta else '', f'{err}'])
+                res.append([['error', action_meta.id if action_meta else '', f'{err}']])
 
         return filter(None, chain.from_iterable(res))
 

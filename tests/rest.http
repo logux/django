@@ -101,7 +101,7 @@ Content-Type: application/json
 # "Action" command: https://logux.io/protocols/backend/spec/#requests
 #
 
-# "action" command -> authenticated (tests/test_project/settings.py:122)
+# "action" command -> authenticated + user rename (tests/test_project/settings.py:122)
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
@@ -114,7 +114,7 @@ Content-Type: application/json
       {
         "type": "user/rename",
         "user": 38,
-        "name": "New"
+        "name": "Ivan"
       },
       {
         "id": "1560954012838 38:Y7bysd:O0ETfc 0",
@@ -181,6 +181,30 @@ Content-Type: application/json
       },
       {
         "id": "1560954012858 38:Y7bysd:O0ETfc 0",
+        "time": 1560954012858
+      }
+    ]
+  ]
+}
+
+###
+
+# "action" command -> subscriptions but with unexicted user (produce UNDO action)
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+  "version": 1,
+  "password": "secret",
+  "commands": [
+    [
+      "action",
+      {
+        "type": "logux/subscribe",
+        "channel": "user/39"
+      },
+      {
+        "id": "1560954012858 39:Y7bysd:O0ETfc 0",
         "time": 1560954012858
       }
     ]

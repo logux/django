@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 # https://logux.io/protocols/backend/examples/#subscription
 LOGUX_SUBSCRIBE = 'logux/subscribe'
+LOGUX_UNDO = 'logux/undo'
 
 
 class Meta:
@@ -202,11 +203,6 @@ class ActionCommand(Command):
     #  ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: Optional[str] = None
 
-    # TODO: add helpers into self
-    #  user_id, client_id, node_id, time(datatime),
-    #  date_diff (https://github.com/logux/core/blob/master/is-first-older/index.js) ???
-    #  send_back, undo.
-
     def __init__(self, cmd_body: List[Action]):
         """ cmd_body should looks like:
             [
@@ -241,12 +237,45 @@ class ActionCommand(Command):
         )
         self.add(action, meta)
 
-    def undo(self):
-        raise NotImplemented()
+    def undo(self, meta: Meta, reason: Optional[str] = 'error', extra: Optional[Dict] = None):
+        """ Logux undo action. https://logux.io/guide/concepts/action/#loguxundo
+
+        Node API:
+          undo (meta, reason = 'error', extra = { }) {
+            let clientId = parseNodeId(meta.id).clientId
+            let [action, undoMeta] = this.buildUndo(meta, reason, extra)
+            undoMeta.clients = (undoMeta.clients || []).concat([clientId])
+            return this.log.add(action, undoMeta)
+          }
+
+        """
+        undo_action = {
+            'type': LOGUX_UNDO,
+            'id': meta.id,
+            'reason': reason,
+            **extra
+        }
+
+        raw_meta = meta.get_raw_meta()
+        undo_raw_meta = {
+            # TODO: should I take here original meta id and time?
+            'id': meta.id,
+            'time': raw_meta['time'],
+
+            'users': raw_meta.get('users'),
+            'nodes': raw_meta.get('nodes'),
+            'clients': raw_meta.get('clients', []) + [meta.client_id],
+            'reasons': raw_meta.get('reasons'),
+            'channels': raw_meta.get('channels')
+        }
+
+        # reduce None keys
+        undo_meta = Meta({k: v for (k, v) in undo_raw_meta.items() if v is not None})
+
+        self.add(undo_action, undo_meta)
 
     # Required and optional action methods (this methods should be implemented by consumer
     def _finally(self) -> LoguxResponse:  # noqa
-        # TODO: rewrite
         """ Callback which will be run on the end of action/subscription processing or on an error """
         return []
 

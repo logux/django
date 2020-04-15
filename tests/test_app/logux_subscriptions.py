@@ -15,25 +15,32 @@ class UserSubscription(SubscriptionCommand):
       { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
     ]
 
+    Should sand back request:
+
+    {
+      "version": 1,
+      "password": "secret",
+      "commands": [
+          [
+              "action",
+              { type: 'user/name', user: 38, name: 'The User' },
+              { clients: ['38:Y7bysd'] }
+          ]
+      ]
+    }
+
     """
     channel_pattern = r'^user/(?P<user_id>\w+)$'
 
     def load(self, action: Action, meta: Meta):
-        # TODO: send_back
-        #   {
-        #       "version": 1,
-        #       "password": "secret",
-        #       "commands": [
-        #           [
-        #               "action",
-        #               { type: 'user/name', user: 38, name: 'The User' },
-        #               { clients: ['38:Y7bysd'] }
-        #           ]
-        #       ]
-        #   }
-
         # should fail with DoesNotExist, and eval undo
-        user = User.objects.get(pk=self.params['user_id'])
+
+        try:
+            user = User.objects.get(pk=self.params['user_id'])
+        except User.DoesNotExist as err:
+            self.undo(meta, 'user does not exist', {'original_exception': f'{err}'})
+            # TODO: what should I return here? Is it processed? Or error?
+            return ['processed', self.meta.id]
 
         # should send back { type: 'user/name', user: 38, name: 'The User' },
         # and here into meta will be added id and time from original subscription
