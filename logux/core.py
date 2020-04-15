@@ -38,6 +38,7 @@ class Meta:
         self._uid: List[str] = self._get_uid()
 
         self.id: str = self._raw_meta['id']
+        self.time_from_id = self._get_time_from_id()
 
         self.user_id: str = self._get_user_id()
         self.client_id: str = self._get_client_id()
@@ -48,22 +49,58 @@ class Meta:
         return self._raw_meta[item]
 
     def __eq__(self, o: Meta) -> bool:
-        return self.time == o.time
+        return self.time == o.time and self.id == o.id
 
     def __ne__(self, o: Meta) -> bool:
-        return self.time != o.time
+        return not self.__eq__(o)
 
     def __lt__(self, other: Meta) -> bool:
-        return self.time < other.time
+        # <
+        if self.get_raw_meta() and not other.get_raw_meta():
+            return False
+        elif not self.get_raw_meta() and other.get_raw_meta():
+            return True
 
-    def __le__(self, other: Meta) -> bool:
-        return self.time <= other.time
+        if self.time > other.time:
+            return False
+        elif self.time < other.time:
+            return True
+
+        if self.id > other.id:
+            return False
+        elif self.id < other.id:
+            return True
+
+        if self.time_from_id > other.time_from_id:
+            return False
+        elif self.time_from_id < other.time_from_id:
+            return True
+
+        return False
 
     def __gt__(self, other: Meta) -> bool:
-        return self.time > other.time
+        # >
+        if self.get_raw_meta() and not other.get_raw_meta():
+            return True
+        elif not self.get_raw_meta() and other.get_raw_meta():
+            return False
 
-    def __ge__(self, other: Meta) -> bool:
-        return self.time >= other.time
+        if self.time < other.time:
+            return False
+        elif self.time > other.time:
+            return True
+
+        if self.id < other.id:
+            return False
+        elif self.id > other.id:
+            return True
+
+        if self.time_from_id < other.time_from_id:
+            return False
+        elif self.time_from_id > other.time_from_id:
+            return True
+
+        return False
 
     # Helpers
     def _get_uid(self):
@@ -97,12 +134,19 @@ class Meta:
         return self._uid[-1] if len(self._uid) == 3 else None
 
     def _get_time(self) -> datetime:
-        """
-        Get time from mata in Python datetime type.
+        """ Get time from mata in Python datetime type.
          For example, if meta is {'id': "1560954012838 38:Y7bysd 0", 'time': 1560954012838},
          then time is 'datetime.datetime(2019, 6, 20, 0, 20, 12, 838000)'
         """
         return datetime.fromtimestamp(int(self._raw_meta['time']) / 1e3)
+
+    def _get_time_from_id(self) -> datetime:
+        """ Get time from `id` of meta in Python datetime type.
+         For example, if meta is {'id': "1560954012838 38:Y7bysd 0", 'time': 1560954012838},
+         then time from id is 'datetime.datetime(2019, 6, 20, 0, 20, 12, 838000)', that means
+         datetime from meta.id[0]
+         """
+        return datetime.fromtimestamp(int(self.id.split(' ')[0]) / 1e3)
 
     def get_raw_meta(self) -> Dict:
         return deepcopy(self._raw_meta)
