@@ -125,6 +125,7 @@ class Command(ABC):
     @staticmethod
     def add(action: Dict, meta: Optional[Meta] = None) -> None:
         # https://logux.io/node-api/#log-add
+        # todo: pass full snippets of Node code may be more useful because this kind of links is not consistent
         # https://github.com/logux/core/blob/36c604158b49697790e96c6e6919c22752e231cb/log/index.js#L29
         #
         # The doc's says:
@@ -240,12 +241,26 @@ class ActionCommand(Command):
     def undo(self, meta: Meta, reason: Optional[str] = 'error', extra: Optional[Dict] = None):
         """ Logux undo action. https://logux.io/guide/concepts/action/#loguxundo
 
+        TODO: cleanup
         Node API:
           undo (meta, reason = 'error', extra = { }) {
             let clientId = parseNodeId(meta.id).clientId
             let [action, undoMeta] = this.buildUndo(meta, reason, extra)
             undoMeta.clients = (undoMeta.clients || []).concat([clientId])
             return this.log.add(action, undoMeta)
+          }
+
+          buildUndo (meta, reason, extra) {
+            let undoMeta = { status: 'processed' }
+
+            if (meta.users) undoMeta.users = meta.users.slice(0)
+            if (meta.nodes) undoMeta.nodes = meta.nodes.slice(0)
+            if (meta.clients) undoMeta.clients = meta.clients.slice(0)
+            if (meta.reasons) undoMeta.reasons = meta.reasons.slice(0)
+            if (meta.channels) undoMeta.channels = meta.channels.slice(0)
+
+            let action = { ...extra, type: 'logux/undo', id: meta.id, reason }
+            return [action, undoMeta]
           }
 
         """
@@ -262,9 +277,13 @@ class ActionCommand(Command):
             'id': meta.id,
             'time': raw_meta['time'],
 
+            # TODO: who is setting processed status instead me?
+            # 'status': 'processed',
+
             'users': raw_meta.get('users'),
             'nodes': raw_meta.get('nodes'),
             'clients': raw_meta.get('clients', []) + [meta.client_id],
+            # TODO: why reason does not passed into reasons in meta?
             'reasons': raw_meta.get('reasons'),
             'channels': raw_meta.get('channels')
         }
