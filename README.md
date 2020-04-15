@@ -15,7 +15,9 @@ pip install -e git://github.com/logux/django.git#egg=logux
 Add `path(r'logux/', include('logux.urls')),` into your `urls.py`
 
 Add `ActionCommand` inheritors into `logux_actions.py` inside any of your module
+Add `SubscriptionCommand` inheritors into `logux_subcriptions.py` inside any of your module
 
+Checkout test app for examples (tests/test_app)
 
 ## Development
 
