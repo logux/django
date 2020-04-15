@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
-from logux import __version__
+from logux import VERSION, AUTHOR
 
 setup(
     name='logux-django',
-    version=__version__,
+    version=VERSION,
     packages=find_packages(),
     install_requires=[
         "django>=2.2.12,<3",
@@ -12,7 +12,7 @@ setup(
     ],
     url='https://github.com/logux/django/',
     license='MIT',
-    author='Vadim Iskuchekov (@egregors)',
+    author=AUTHOR,
     author_email='egregors@pm.me',
     description='Django Logux integration engine https://logux.io/',
     long_description=open('README.md', 'r', encoding='utf-8').read(),

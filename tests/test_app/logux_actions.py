@@ -3,10 +3,10 @@ from typing import Optional
 from django.contrib.auth.models import User
 
 from logux.core import ActionCommand, Meta, LoguxResponse, Action
-from logux.dispatchers import actions
+from logux.dispatchers import logux
 
 
-class AddCatAction(ActionCommand):
+class RenameUserAction(ActionCommand):
     """ Handler for example from https://logux.io/protocols/backend/examples/
 
     Request:
@@ -52,11 +52,14 @@ class AddCatAction(ActionCommand):
             user.first_name = action['name']
             user.save()
         except User.DoesNotExist as err:
-            # TODO: waiting for undo implementation
-            # self.undo()
+            self.undo(
+                meta,
+                reason='user does not exist',
+                extra={'original_exception': f'{err}'}
+            )
             return ['error', meta.id, f'{err}']
 
         return ['processed', meta.id]
 
 
-actions.register(AddCatAction)
+logux.actions.register(RenameUserAction)

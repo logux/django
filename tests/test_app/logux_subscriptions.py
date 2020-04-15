@@ -3,7 +3,7 @@ from typing import Optional
 from django.contrib.auth.models import User
 
 from logux.core import SubscriptionCommand, Action, Meta
-from logux.dispatchers import subscriptions
+from logux.dispatchers import logux
 
 
 class UserSubscription(SubscriptionCommand):
@@ -56,4 +56,4 @@ class UserSubscription(SubscriptionCommand):
         return self.params['user_id'] == meta.user_id
 
 
-subscriptions.register(UserSubscription)
+logux.subscriptions.register(UserSubscription)

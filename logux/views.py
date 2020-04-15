@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from logux import settings
 from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command, LOGUX_SUBSCRIBE
-from logux.dispatchers import actions, subscriptions
+from logux.dispatchers import logux
 from logux.settings import LOGUX_CONTROL_SECRET
 
 logger = logging.getLogger(__name__)
@@ -65,16 +65,16 @@ class LoguxRequest:
                     #  and add sub action into all actions like regular command
                     channel = cmd[1]["channel"]
                     logger.debug(f'got subscription for channel: {channel}')
-                    commands.append(subscriptions[channel](cmd))
+                    commands.append(logux.subscriptions[channel](cmd))
                     continue
 
                 # custom actions
-                if not actions.has_action(action_type):
+                if not logux.actions.has_action(action_type):
                     logger.error(f'unknown action: {action_type}')
                     commands.append(UnknownAction(cmd))
                     continue
 
-                commands.append(actions[action_type](cmd))
+                commands.append(logux.actions[action_type](cmd))
 
             else:
                 logger.error(f'wrong command type: {cmd}')

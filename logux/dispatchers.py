@@ -87,9 +87,12 @@ class DefaultSubscriptionDispatcher(BaseActionDispatcher):
             self._subs[sub.channel_pattern] = sub
 
 
-# TODO: maybe rename? maybe all actions and all subscriptions need be here? 🤔🤔🤔
-#  looks like, subscriptions are almost the same as actions.
-actions = DefaultActionDispatcher()
-subscriptions = DefaultSubscriptionDispatcher()
+class DefaultDispatcher:
+    def __init__(self):
+        self.actions = DefaultActionDispatcher()
+        self.subscriptions = DefaultSubscriptionDispatcher()
 
-__all__ = ['actions', 'subscriptions']
+
+logux = DefaultDispatcher()
+
+__all__ = [logux]

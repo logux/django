@@ -126,4 +126,5 @@ def _auth(user_id, token: str):
     return token == 'good-token'
 
 
+# LOGUX_AUTH_FUNC = _auth
 LOGUX_AUTH_FUNC = _auth
