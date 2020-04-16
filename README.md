@@ -59,7 +59,6 @@ from django.contrib.auth.models import User
 from logux.core import ActionCommand, Meta, Action
 from logux.dispatchers import logux
 
-
 class RenameUserAction(ActionCommand):
     """ Action Handler for example from https://logux.io/protocols/backend/examples/ """
 
@@ -100,7 +99,6 @@ from django.contrib.auth.models import User
 from logux.core import ChannelCommand, Action, Meta
 from logux.dispatchers import logux
 
-
 class UserChannel(ChannelCommand):
     channel_pattern = r'^user/(?P<user_id>\w+)$'
 
@@ -112,7 +110,6 @@ class UserChannel(ChannelCommand):
         self.send_back(
             {'type': 'user/name', 'user': 38, 'name': user.first_name}
         )
-
 
 logux.channels.register(UserChannel)
 
