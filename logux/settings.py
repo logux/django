@@ -8,7 +8,6 @@ from logux.utils import autodiscover
 DEFAULT_LOGUX_URL = 'http://localhost:31337'
 LOGUX_URL = getattr(settings, 'LOGUX_URL', DEFAULT_LOGUX_URL)
 
-# TODO: add into Doc: do not store your pass in settings.py, use ENV instead
 LOGUX_CONTROL_SECRET = getattr(settings, 'LOGUX_CONTROL_SECRET', None)
 
 if LOGUX_CONTROL_SECRET is None:

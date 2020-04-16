@@ -1,4 +1,4 @@
-.PHONY: venv install run run_logux_server run_logux_client run_all test
+.PHONY: venv install run test
 
 venv:
 	python3 -m venv env
@@ -8,15 +8,6 @@ install:
 
 run:
 	./env/bin/python tests/manage.py runserver
-
-run_logux_server:
-	cd ./tests/server-logux/ && yarn start
-
-run_logux_client:
-	cd ./tests/client-logux/ && yarn start
-
-run_all: run run_logux_server run_logux_client
-
 
 test:
 	source env/bin/activate && python tests/manage.py test test_app
