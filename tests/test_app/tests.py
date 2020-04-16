@@ -60,7 +60,7 @@ class ProxyAuthTestCase(LoguxTestCase):
         })
 
         self.assertEqual(r[0][0], 'error')
-        self.assertEqual(r[0][1], 'Unauthorised Logux proxy server')
+        self.assertEqual(r[0][2], 'Unauthorised Logux proxy server')
 
 
 class WrongLoguxCommandTypeTestCase(TestCase):
