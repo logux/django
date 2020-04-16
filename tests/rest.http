@@ -13,8 +13,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "secret",
+  "version": 3,
+  "secret": "secret",
   "commands": []
 }
 
@@ -25,8 +25,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "wrong secret",
+  "version": 3,
+  "secret": "wrong secret",
   "commands": []
 }
 
@@ -41,8 +41,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "secret",
+  "version": 3,
+  "secret": "secret",
   "commands": [
     [
       "sup guys!",
@@ -64,8 +64,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "secret",
+  "version": 3,
+  "secret": "secret",
   "commands": [
     [
       "auth",
@@ -83,8 +83,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "secret",
+  "version": 3,
+  "secret": "secret",
   "commands": [
     [
       "auth",
@@ -106,8 +106,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "secret",
+  "version": 3,
+  "secret": "secret",
   "commands": [
     [
       "action",
@@ -126,7 +126,7 @@ Content-Type: application/json
       {
         "type": "user/rename",
         "user": 21,
-        "name": "New"
+        "name": "Egor"
       },
       {
         "id": "1560954012900 38:Y7bysd:O0ETfc 1",
@@ -143,8 +143,8 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 2,
-  "password": "secret",
+  "version": 3,
+  "secret": "secret",
   "commands": [
     [
       "action",
@@ -165,13 +165,13 @@ Content-Type: application/json
 
 ###
 
-# "action" command -> subscriptions
+# "action" command -> channels
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
   "version": 1,
-  "password": "secret",
+  "secret": "secret",
   "commands": [
     [
       "action",
@@ -189,13 +189,13 @@ Content-Type: application/json
 
 ###
 
-# "action" command -> subscriptions but with unexicted user (produce UNDO action)
+# "action" command -> channels but with inexistent user (produce UNDO action)
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
   "version": 1,
-  "password": "secret",
+  "secret": "secret",
   "commands": [
     [
       "action",

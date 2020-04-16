@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Union, Type
 
-from logux.core import ActionCommand, SubscriptionCommand, UnknownAction
+from logux.core import ActionCommand, ChannelCommand, UnknownAction
 
 logger = logging.getLogger(__name__)
 
@@ -44,15 +44,15 @@ class DefaultActionDispatcher(BaseActionDispatcher):
             self._actions[action.action_type] = action
 
 
-class DefaultSubscriptionDispatcher(BaseActionDispatcher):
+class DefaultChannelDispatcher(BaseActionDispatcher):
     """ TODO: Add Doc String """
 
-    _subs: Dict[str, SubscriptionCommand] = {}
+    _subs: Dict[str, ChannelCommand] = {}
 
     def __str__(self):
         return ', '.join([k for k in self._subs])
 
-    def __getitem__(self, item: str) -> Union[SubscriptionCommand, Type[UnknownAction]]:
+    def __getitem__(self, item: str) -> Union[ChannelCommand, Type[UnknownAction]]:
         for sub in self._subs.values():
             if sub.is_match(channel=item):
                 return sub
@@ -81,7 +81,7 @@ class DefaultSubscriptionDispatcher(BaseActionDispatcher):
 
         return True
 
-    def register(self, sub: SubscriptionCommand):
+    def register(self, sub: ChannelCommand):
         if self._sub_is_valid(sub):
             logger.info(f'registering subscription for `{sub.channel_pattern}`')
             self._subs[sub.channel_pattern] = sub
@@ -90,7 +90,7 @@ class DefaultSubscriptionDispatcher(BaseActionDispatcher):
 class DefaultDispatcher:
     def __init__(self):
         self.actions = DefaultActionDispatcher()
-        self.subscriptions = DefaultSubscriptionDispatcher()
+        self.channels = DefaultChannelDispatcher()
 
 
 logux = DefaultDispatcher()

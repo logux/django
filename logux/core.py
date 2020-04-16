@@ -6,16 +6,17 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict
+from typing import List, Callable, Optional, Dict, NoReturn
 
 import requests
 from django.conf import settings
+
+from logux import LOGUX_PROTOCOL_VERSION
 
 LoguxResponse = LoguxRequest = List[str]
 Action = Dict[str, str]
 logger = logging.getLogger(__name__)
 
-# https://logux.io/protocols/backend/examples/#subscription
 LOGUX_SUBSCRIBE = 'logux/subscribe'
 LOGUX_UNDO = 'logux/undo'
 
@@ -23,7 +24,7 @@ LOGUX_UNDO = 'logux/undo'
 class Meta:
     """ Logux meta: https://logux.io/guide/concepts/meta/
     TODO: add docs about comp:
-        https://github.com/logux/django/issues/12#issuecomment-612394901
+      https://github.com/logux/django/issues/12#issuecomment-612394901
 
     TODO: Comparing method implements according Node API:
       https://github.com/logux/core/blob/master/is-first-older/index.js
@@ -152,58 +153,69 @@ class Meta:
         return deepcopy(self._raw_meta)
 
     def get_json(self) -> str:
-        return json.dumps(self._raw_meta)  # , ensure_ascii=False).encode('utf8')
+        return json.dumps(self._raw_meta)
+
+
+def add(action: Dict, raw_meta: Optional[Dict] = None) -> NoReturn:
+    """ `add` is low level API function to send any actions and meta into Logux server.
+    If `raw_meta` is None just empty dict will be passed to Logux server. Logux server
+    will set `id` and `time` on this side.
+
+    Keep in mind, in the current version `add` is sync.
+
+    For more information: https://logux.io/node-api/#log-add
+
+    :param action: action dict
+    :param raw_meta: meta dict (not Meta instance)
+
+    TODO: extract this exception into custom error class -> logux/exception.py
+    :raises: base Exception() if Logux Proxy returns non 200 response code
+
+    :return: NoReturn
+    """
+    command = {
+        "version": LOGUX_PROTOCOL_VERSION,
+        "secret": settings.LOGUX_CONTROL_SECRET,
+        "commands": [
+            [
+                "action",
+                action,
+                raw_meta or {}
+            ]
+        ]
+    }
+
+    logger.debug(f'add action {action} with meta {raw_meta or {}} to Logux')
+
+    r = requests.post(url=settings.LOGUX_URL, json=command)
+    logger.debug(f'Logux answer is {r.status_code}: {r.text}')
+
+    if r.status_code != 200:
+        # TODO: Should I crash App here?
+        logger.error(f'`add` to Logux is failed! err: {r.status_code}: {r.text}')
+        raise Exception(f'Non 200 response from Logux Proxy (add): {r.status_code}: {r.text}')
 
 
 class Command(ABC):
     """ Logux Command abstract class.
     All type of Logux Commands should be inheritance from this one.
 
-    Required ony one method `apply()` witch executing command and return LoguxResponse with answer or error message
+    Required ony one method `apply()` witch executing command and return LoguxResponse
+      with an answer or error a message.
     """
 
     @abstractmethod
     def apply(self) -> LoguxResponse:
+        """
+         This method consistently apply all Action methods inside of try/catch and construct List of
+        LoguxResponse's with action methods results or error messages.
+
+        :return: list of results of applying all actions methods
+        """
         raise NotImplemented()
 
-    @staticmethod
-    def add(action: Dict, meta: Optional[Meta] = None) -> None:
-        # https://logux.io/node-api/#log-add
-        # todo: pass full snippets of Node code may be more useful because this kind of links is not consistent
-        # https://github.com/logux/core/blob/36c604158b49697790e96c6e6919c22752e231cb/log/index.js#L29
-        #
-        # The doc's says:
-        #   It will set id, time (if they was missed) and added property to meta and call all listeners.
-        # Where we should take id and time? Should we generate it somehow, or it is always meta from already
-        # existed action?
-
-        if meta is None:
-            # TODO: deal with meta generating
-            raise ValueError('for now meta is required!')
-
-        data = {
-            # TODO: deal with versions
-            "version": 2,
-            "password": settings.LOGUX_CONTROL_SECRET,
-            "commands": [
-                ["action",
-                 action,
-                 meta.get_raw_meta()]
-            ]
-        }
-
-        # TODO: clean up this mess. catch all possible errors, and add some logs messages
-        logger.debug(f'add action {action} with meta {meta.get_raw_meta()} to Log')
-        try:
-            r = requests.post(url=settings.LOGUX_URL, json=data)
-            logger.debug(f'response: {r.text}')
-            if r.status_code != 200:
-                # TODO: just write it in the log
-                raise ValueError(f'Bad Request to Logux (add): {r.text}')
-        except ConnectionError as err:
-            pass
-
-    def get_meta(self) -> Optional[Meta]:
+    def get_action_meta(self) -> Optional[Meta]:
+        # TODO: WTF is going on here?
         if isinstance(self, (ActionCommand,)):
             return self.meta
 
@@ -213,48 +225,49 @@ class Command(ABC):
 class AuthCommand(Command):
     """ Logux Auth Command provide way to check is the User authenticated.
 
-    The constructor required `cmd_body: List[str]` from Logux Server request and
-    `logux_auth(user_id: int, credentials: Any) -> bool` function to prove user is authenticated.
-
-        `cmd_body` example: ["auth", "38", "good-token", "gf4Ygi6grYZYDH5Z2BsoR"]
-
-    `logux_auth` function should be injected from consumer app or
-
     TODO: this class should be ActionCommand probably
     """
 
     def __init__(self, cmd_body: LoguxRequest, logux_auth: Callable[[str, str], bool]):
-        # meh
-        # TODO: validate it
-        _, self.user_id, self.token, self.auth_id = cmd_body
+        """ Construct Auth cmd from raw logux command.
 
-        # TODO: and check somehow logux_auth function
+        :param cmd_body: raw logux command, like ["auth", "38", "good-token", "gf4Ygi6grYZYDH5Z2BsoR"]
+        :type cmd_body: List[str]
+        :param logux_auth: function to prove user is authenticated,
+          type hint: `logux_auth(user_id: str, token: str) -> bool`. `logux_auth` function will be injected from
+          settings.LOGUX_AUTH_FUNC (should be provided by consumer)
+        :type logux_auth: Callable[[str, str], bool]
+        """
+        _, self.user_id, self.token, self.auth_id = cmd_body
         self.logux_auth = logux_auth
 
     def apply(self) -> List[LoguxResponse]:
-        # TODO: probably need LoguxResponse constructor
-        return [['authenticated', self.auth_id]] \
-            if self.logux_auth(self.user_id, self.token) \
-            else [['denied', self.auth_id]]
+        """ Applying auth command
+
+        :returns:  `authenticated` or `denied` action dependently if user is authenticated.
+        """
+        is_authenticated = self.logux_auth(self.user_id, self.token)
+        logger.warning(f'user: {self.user_id} is not authenticated')
+        return [[f'{"authenticated" if is_authenticated else "denied"}', self.auth_id]]
 
 
 class ActionCommand(Command):
+    """ Logux Action Command provide way to handle actions from Logux Proxy.
     """
-        TODO:
-         - [ ] add Doc string
-         - [x] add meta helpers
-    """
-    # Required field, if the `action_type` property does not defined DefaultActionDispatcher will raise
-    #  ValueError('`action_type` attribute is required for all Actions') Exception
+    # `action_type` is a required property, if the property does not defined
+    #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: Optional[str] = None
 
     def __init__(self, cmd_body: List[Action]):
-        """ cmd_body should looks like:
-            [
+        """ Construct Action cmd from raw logux command.
+
+        :param cmd_body: raw logux cmd, like:
+           [
               "action",                                                         // action_type
               { type: 'user/rename', user: 38, name: 'New' },                   // cmd_body[1]
               { id: "1560954012838 38:Y7bysd:O0ETfc 0", time: 1560954012838 }   // cmd_body[2]
             ]
+        :type cmd_body: List[Action]
         """
         self._action: Action = cmd_body[1]
         self._meta: Meta = Meta(cmd_body[2])
@@ -269,120 +282,150 @@ class ActionCommand(Command):
         # do not change internal meta state from outside
         return deepcopy(self._meta)
 
-    def send_back(self, action: Action, raw_meta: Optional[Dict] = None):
-        # if `raw_meta` contain `id`, `time` or `clients` the original data will be overwritten
-        raw_meta = {} if raw_meta is None else raw_meta
-        meta = Meta(
-            {
-                'id': self.meta.id,
-                'time': self._meta['time'],
-                'clients': [self.meta.client_id],
-                **raw_meta
-            }
-        )
-        self.add(action, meta)
+    def send_back(self, action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
+        """ Sand action with meta back to Logux. Will add `clients` from original action to the meta.
+        For more information: https://logux.io/guide/concepts/action/#adding-actions-on-the-server
 
-    def undo(self, meta: Meta, reason: Optional[str] = 'error', extra: Optional[Dict] = None):
+        :param action: any logux action
+        :type action: Action
+        :param raw_meta: optional additional mata
+        :type raw_meta: Optional[Dict]
+        """
+        raw_meta = {} if raw_meta is None else raw_meta
+        add(action, {'clients': [self.meta.client_id], **raw_meta})
+
+    def undo(self, reason: Optional[str] = 'error', extra: Optional[Dict] = None):
         """ Logux undo action. https://logux.io/guide/concepts/action/#loguxundo
 
-        TODO: cleanup
-        Node API:
-          undo (meta, reason = 'error', extra = { }) {
-            let clientId = parseNodeId(meta.id).clientId
-            let [action, undoMeta] = this.buildUndo(meta, reason, extra)
-            undoMeta.clients = (undoMeta.clients || []).concat([clientId])
-            return this.log.add(action, undoMeta)
-          }
-
-          buildUndo (meta, reason, extra) {
-            let undoMeta = { status: 'processed' }
-
-            if (meta.users) undoMeta.users = meta.users.slice(0)
-            if (meta.nodes) undoMeta.nodes = meta.nodes.slice(0)
-            if (meta.clients) undoMeta.clients = meta.clients.slice(0)
-            if (meta.reasons) undoMeta.reasons = meta.reasons.slice(0)
-            if (meta.channels) undoMeta.channels = meta.channels.slice(0)
-
-            let action = { ...extra, type: 'logux/undo', id: meta.id, reason }
-            return [action, undoMeta]
-          }
-
+        :param reason: describes the reason for reverting
+        :type reason: str
+        :param extra: optional additional data
+        :type extra: Dict
         """
         undo_action = {
             'type': LOGUX_UNDO,
-            'id': meta.id,
+            'id': self.meta.id,
             'reason': reason,
             **extra
         }
 
-        raw_meta = meta.get_raw_meta()
+        raw_meta = self.meta.get_raw_meta()
         undo_raw_meta = {
-            # TODO: should I take here original meta id and time?
-            'id': meta.id,
-            'time': raw_meta['time'],
-
-            # TODO: who is setting processed status instead me?
-            # 'status': 'processed',
+            'status': 'processed',
 
             'users': raw_meta.get('users'),
             'nodes': raw_meta.get('nodes'),
-            'clients': raw_meta.get('clients', []) + [meta.client_id],
-            # TODO: why reason does not passed into reasons in meta?
+            'clients': raw_meta.get('clients', []) + [self.meta.client_id],
             'reasons': raw_meta.get('reasons'),
             'channels': raw_meta.get('channels')
         }
 
         # reduce None keys
-        undo_meta = Meta({k: v for (k, v) in undo_raw_meta.items() if v is not None})
+        undo_meta = {k: v for (k, v) in undo_raw_meta.items() if v is not None}
 
-        self.add(undo_action, undo_meta)
+        add(undo_action, undo_meta)
 
-    # Required and optional action methods (this methods should be implemented by consumer
-    def _finally(self) -> LoguxResponse:  # noqa
+    # Required and optional action methods (these methods should be implemented by consumer)
+    def _finally(self, action: Action, meta: Meta) -> LoguxResponse:  # noqa
         """ Callback which will be run on the end of action/subscription processing or on an error """
         return []
 
     @abstractmethod
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
-        """ TODO: add docs """
+    def access(self, action: Action, meta: Meta) -> bool:
+        """ `access` is required method and should contain code for checking user permissions.
+
+        :param action: logux action
+        :type action: Action
+        :param meta: logux meta
+        :type meta: Meta
+
+        :returns: does current user have permission for apply this action?
+        """
         raise NotImplemented()
 
-    def resend(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
-        """ TODO: add docs """
-        return []
+    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
+        """ `resend` should return recipients for this action.
+        It should look like:
+            {'channels': ['users/38']}
+        and may content fields: channels, users, nodes, clients.
 
-    def process(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
-        """ TODO: add docs """
-        return []
+        For more information: https://logux.io/node-api/#resend
 
-    # Required for Command
+        :param action: logux action
+        :type action: Action
+        :param meta: logux meta
+        :type meta: Meta
+
+        :returns: dict with recipients
+        """
+        return {}
+
+    def process(self, action: Action, meta: Meta) -> NoReturn:
+        """ `process` should contain consumer business code. If it raised exception,
+        self.apply will return error action automatically. If `process` return error action
+        Logux server will eval `undo` by this side.
+
+        :param action: logux action
+        :type action: Action
+        :param meta: logux meta
+        :type meta: Meta
+        """
+        pass
+
     def apply(self) -> List[LoguxResponse]:
-        # https://github.com/logux/django/issues/5
-        # TODO: do not eval access few times
-        return [
-            self.resend(self._action, self._meta),
-            ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
-            self.process(self._action, self._meta) if self.access(self._action, self._meta) else [],
-            self._finally()
+        applying_result = []
+
+        # resend
+        # TODO: check what exactly resend Dict contain. What should I do if recipients is {}?
+        resend_result = ['resend', self.meta.id, self.resend(self._action, self._meta)]
+        applying_result.append(resend_result)
+
+        # access
+        try:
+            access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
+        except Exception as access_err:
+            access_result = ['error', self._meta.id, f'{access_err}']
+
+        applying_result.append(access_result)
+
+        # process
+        if access_result[0] == 'approved':
+            try:
+                self.process(self._action, self._meta)
+                process_result = ['processed', self._meta.id]
+            except Exception as process_err:
+                process_result = ['error', self._meta.id, f'{process_err}']
+
+            applying_result.append(process_result)
+
+        # finally
+        try:
+            finally_result = [self.process(self._action, self._meta)]
+        except Exception as finally_err:
+            finally_result = ['error', self._meta.id, f'{finally_err}']
+
+        applying_result.append(finally_result)
+
+        return applying_result
+
+
+class ChannelCommand(ActionCommand):
+    """ Logux Subscribe Action Command provide way to handle subscription actions from Logux Proxy.
+
+    For more information: https://logux.io/protocols/backend/examples/#subscription
+
+    Subscription actions should look like:
+        [
+          "action",
+          { type: 'logux/subscribe', channel: '38/name' },
+          { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
         ]
-
-
-class SubscriptionCommand(ActionCommand):
-    """ Todo: add docs: https://logux.io/protocols/backend/examples/#subscription
-
-    This class looks exactly like ActionCommand, but with few additional features.
-    So, maybe it may be a Mixin
-
-    [
-      "action",
-      { type: 'logux/subscribe', channel: '38/name' },
-      { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
-    ]
-
     """
-    # Required field, if the `channel_pattern` property does not defined DefaultSubscriptionsDispatcher will raise
-    #  ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
+    # `channel_pattern` is required property, if property does not defined
+    #   DefaultSubscriptionsDispatcher will raise
+    #   ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
     action_type = LOGUX_SUBSCRIBE
+    # regexp, like in urls.py
     channel_pattern: Optional[str] = None
 
     def __init__(self, cmd_body: List[Action]):
@@ -397,16 +440,41 @@ class SubscriptionCommand(ActionCommand):
     def is_match(cls, channel: str) -> bool:
         return True if re.match(cls.channel_pattern, channel) else None
 
+    # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta):
+    def load(self, action: Action, meta: Meta) -> NoReturn:
+        """ `load` should contain consumer code for applying subscription.
+        Generally this method is almost the same as `process`. If it raised exception,
+        self.apply will return error action automatically. If `load` return error action
+        Logux server will eval `undo` by this side.
+
+        :param action: logux action
+        :type action: Action
+        :param meta: logux meta
+        :type meta: Meta
+        """
         pass
 
     def apply(self) -> List[LoguxResponse]:
-        # TODO: do not eval access few times
-        return [
-            ["approved", self._meta.id] if self.access(self._action, self._meta) else ['denied', self._meta.id],
-            self.load(self._action, self._meta) if self.access(self._action, self._meta) else []
-        ]
+        applying_result = []
+
+        # access
+        try:
+            access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
+        except Exception as access_err:
+            access_result = ['error', self._meta.id, f'{access_err}']
+
+        # load
+        if access_result[0] == 'approved':
+            try:
+                self.load(self._action, self._meta)
+                load_result = ['processed', self._meta.id]
+            except Exception as load_err:
+                load_result = ['error', self._meta.id, f'{load_err}']
+
+            applying_result.append(load_result)
+
+        return applying_result
 
 
 class UnknownAction(ActionCommand):

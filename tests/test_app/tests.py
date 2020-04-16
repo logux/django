@@ -30,8 +30,8 @@ class ProxyAuthTestCase(LoguxTestCase):
 
     def test_proxy_auth_good_secret(self) -> None:
         r: JsonResponse = self.logux_request({
-            "version": 2,
-            "password": "secret",
+            "version": 3,
+            "secret": "secret",
             "commands": [
                 [
                     "auth",
@@ -47,8 +47,8 @@ class ProxyAuthTestCase(LoguxTestCase):
 
     def test_proxy_auth_bad_secret(self) -> None:
         r: JsonResponse = self.logux_request({
-            "version": 2,
-            "password": "wrong-secret",
+            "version": 3,
+            "secret": "wrong-secret",
             "commands": [
                 [
                     "auth",
@@ -146,8 +146,8 @@ class LoguxAuthCommandTestCase(LoguxTestCase):
 
     def test_success_auth(self) -> None:
         r: JsonResponse = self.logux_request({
-            "version": 2,
-            "password": "secret",
+            "version": 3,
+            "secret": "secret",
             "commands": [
                 [
                     "auth",
@@ -163,8 +163,8 @@ class LoguxAuthCommandTestCase(LoguxTestCase):
 
     def test_denied_auth(self):
         r: JsonResponse = self.logux_request({
-            "version": 2,
-            "password": "secret",
+            "version": 3,
+            "secret": "secret",
             "commands": [
                 [
                     "auth",
@@ -183,8 +183,8 @@ class LoguxServerErrorsTestCase(LoguxTestCase):
 
     def test_unknown_action(self):
         r: JsonResponse = self.logux_request({
-            "version": 2,
-            "password": "secret",
+            "version": 3,
+            "secret": "secret",
             "commands": [
                 [
                     "action",

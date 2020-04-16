@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class LoguxRequest:
     """ LoguxRequest is class for deserialized request from Logux Server proxy
 
-    The constructor should extract common fields like `version` and `password` and parse list of commands.
+    The constructor should extract common fields like `version` and `secret` and parse list of commands.
 
     By default command parser will provide only AuthCommand implementation (with logux_auth function
     injection). Other Action should by parsed by consumer dispatcher.
@@ -42,7 +42,7 @@ class LoguxRequest:
 
         # TODO: what should I do with the versions?
         self.version: str = self._body['version']
-        self.password: str = self._body['password']
+        self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
 
     def _parse_commands(self) -> List[Command]:
@@ -65,7 +65,7 @@ class LoguxRequest:
                     #  and add sub action into all actions like regular command
                     channel = cmd[1]["channel"]
                     logger.debug(f'got subscription for channel: {channel}')
-                    commands.append(logux.subscriptions[channel](cmd))
+                    commands.append(logux.channels[channel](cmd))
                     continue
 
                 # custom actions
@@ -85,8 +85,8 @@ class LoguxRequest:
         return commands
 
     def _is_server_authenticated(self) -> bool:
-        """ Check Logux proxy server password """
-        return self._body['password'] == LOGUX_CONTROL_SECRET
+        """ Check Logux proxy server secret """
+        return self._body['secret'] == LOGUX_CONTROL_SECRET
 
     def apply_commands(self) -> Iterable[LoguxResponse]:
         if not self._is_server_authenticated():
@@ -105,7 +105,7 @@ class LoguxRequest:
                 res.append(cmd.apply())
             except Exception as err:
                 logger.error(f'fail during command applying: {err}')
-                action_meta = cmd.get_meta()
+                action_meta = cmd.get_action_meta()
                 # TODO: what if I can't got META?
                 res.append([['error', action_meta.id if action_meta else '', f'{err}']])
 
