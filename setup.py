@@ -8,7 +8,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "django>=2.2.12,<3",
-        "requests==2.23.0"
+        "requests>=2.23.0"
     ],
     url='https://github.com/logux/django/',
     license='MIT',
