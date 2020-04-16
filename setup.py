@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 from logux import VERSION, AUTHOR
 
 setup(
-    name='logux-django',
+    name='logux_django',
     version=VERSION,
     packages=find_packages(),
     install_requires=[

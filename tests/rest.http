@@ -170,7 +170,7 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 1,
+  "version": 3,
   "secret": "secret",
   "commands": [
     [
@@ -194,7 +194,7 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 1,
+  "version": 3,
   "secret": "secret",
   "commands": [
     [

@@ -34,9 +34,6 @@ class Meta:
     """ Logux meta: https://logux.io/guide/concepts/meta/
     TODO: add docs about comp:
       https://github.com/logux/django/issues/12#issuecomment-612394901
-
-    TODO: Comparing method implements according Node API:
-      https://github.com/logux/core/blob/master/is-first-older/index.js
     """
 
     def __init__(self, raw_meta: Dict[str, str]):
@@ -165,12 +162,12 @@ class Meta:
         return json.dumps(self._raw_meta)
 
 
-def add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
-    """ `add` is low level API function to send any actions and meta into Logux server.
+def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
+    """ `logux_add` is low level API function to send any actions and meta into Logux server.
     If `raw_meta` is None just empty dict will be passed to Logux server. Logux server
     will set `id` and `time` on this side.
 
-    Keep in mind, in the current version `add` is sync.
+    Keep in mind, in the current version `logux_add` is sync.
 
     For more information: https://logux.io/node-api/#log-add
 
@@ -194,15 +191,14 @@ def add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
         ]
     }
 
-    logger.debug(f'add action {action} with meta {raw_meta or {}} to Logux')
+    logger.debug(f'logux_add action {action} with meta {raw_meta or {}} to Logux')
 
     r = requests.post(url=settings.LOGUX_URL, json=command)
     logger.debug(f'Logux answer is {r.status_code}: {r.text}')
 
     if r.status_code != 200:
-        # TODO: Should I crash App here?
-        logger.error(f'`add` to Logux is failed! err: {r.status_code}: {r.text}')
-        raise Exception(f'Non 200 response from Logux Proxy (add): {r.status_code}: {r.text}')
+        logger.error(f'`logux_add` to Logux is failed! err: {r.status_code}: {r.text}')
+        raise Exception(f'Non 200 response from Logux Proxy (logux_add): {r.status_code}: {r.text}')
 
 
 class Command(ABC):
@@ -294,7 +290,7 @@ class ActionCommand(Command):
         :type raw_meta: Optional[Dict]
         """
         raw_meta = {} if raw_meta is None else raw_meta
-        add(action, {'clients': [self.meta.client_id], **raw_meta})
+        logux_add(action, {'clients': [self.meta.client_id], **raw_meta})
 
     def undo(self, reason: Optional[str] = 'error', extra: Optional[Dict] = None):
         """ Logux undo action. https://logux.io/guide/concepts/action/#loguxundo
@@ -325,7 +321,7 @@ class ActionCommand(Command):
         # reduce None keys
         undo_meta = {k: v for (k, v) in undo_raw_meta.items() if v is not None}
 
-        add(undo_action, undo_meta)
+        logux_add(undo_action, undo_meta)
 
     # Required and optional action methods (these methods should be implemented by consumer)
     def _finally(self, action: Action, meta: Meta) -> LoguxResponse:  # noqa
@@ -378,7 +374,6 @@ class ActionCommand(Command):
         applying_result = []
 
         # resend
-        # TODO: check what exactly resend Dict contain. What should I do if recipients is {}?
         resend_result = ['resend', self.meta.id, self.resend(self._action, self._meta)]
         applying_result.append(resend_result)
 

@@ -122,12 +122,12 @@ For more examples, please checkout `test app` (tests/test_app)
 
 ### Utils
 
-#### logux.core.add
-`add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn` is low level API function to send any actions and meta into Logux server.
+#### logux.core.logux_add
+`logux_add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn` is low level API function to send any actions and meta into Logux server.
 
 If `raw_meta` is `None` just empty Dict will be passed to Logux server.
 
-Keep in mind, in the current version `add` is sync.
+Keep in mind, in the current version `logux_add` is sync.
 
 For more information: https://logux.io/node-api/#log-add
 
