@@ -7,7 +7,8 @@ from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 
 from logux import settings
-from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command, LOGUX_SUBSCRIBE
+from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command, LOGUX_SUBSCRIBE, \
+    protocol_version_is_supported
 from logux.dispatchers import logux
 from logux.settings import LOGUX_CONTROL_SECRET
 
@@ -19,14 +20,11 @@ class LoguxRequest:
 
     The constructor should extract common fields like `version` and `secret` and parse list of commands.
 
-    By default command parser will provide only AuthCommand implementation (with logux_auth function
+    By default, command parser will provide only AuthCommand implementation (with logux_auth function
     injection). Other Action should by parsed by consumer dispatcher.
-
-    TODO: add ref to doc's and examples of consumer dispatcher in the test app
 
     TODO: send 403 if proxy secret is wrong
     TODO: send 429 if brute force check is fail
-    TODO: send 500 and stacktrace if dispatcher gonna down
     """
 
     class CommandType:
@@ -38,10 +36,19 @@ class LoguxRequest:
         choices = [AUTH, ACTION]
 
     def __init__(self, request: HttpRequest):
+        """ Construct the Command and check protocol version support.
+
+        :param request: request with command from Logux Proxy
+        :raises: base Exception if request protocol version is not supported by backend
+        """
         self._body = json.loads(request.body.decode('utf-8'))
 
-        # TODO: what should I do with the versions?
-        self.version: str = self._body['version']
+        self.version: int = int(self._body['version'])
+        # TODO: should I crush App here?
+        if not protocol_version_is_supported(self.version):
+            # TODO: extract to custom logux exception
+            raise Exception(f'Unsupported protocol version: {self.version}')
+
         self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
 
@@ -61,8 +68,6 @@ class LoguxRequest:
 
                 # subscribe actions
                 if action_type == LOGUX_SUBSCRIBE:
-                    # TODO: try to find particular action handler by `channel` pattern?
-                    #  and add sub action into all actions like regular command
                     channel = cmd[1]["channel"]
                     logger.debug(f'got subscription for channel: {channel}')
                     commands.append(logux.channels[channel](cmd))
@@ -93,27 +98,22 @@ class LoguxRequest:
             # TODO: extract to common way to error response
             err_msg = 'Unauthorised Logux proxy server'
             logger.warning(err_msg)
-            return [['error', err_msg]]
+            return [['error', {}, err_msg]]
 
         if len(self.commands) == 0:
-            return [['error', f'command list is empty']]
+            return [['error', {}, f'command list is empty']]
 
-        # TODO: is it correct behavior? Or I should send error message immediately by send_back or add?
-        res: List[LoguxResponse] = []
-        for cmd in self.commands:
-            try:
-                res.append(cmd.apply())
-            except Exception as err:
-                logger.error(f'fail during command applying: {err}')
-                action_meta = cmd.get_action_meta()
-                # TODO: what if I can't got META?
-                res.append([['error', action_meta.id if action_meta else '', f'{err}']])
-
-        return filter(None, chain.from_iterable(res))
+        return filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands]))
 
 
 @csrf_exempt
 def dispatch(request: HttpRequest):
+    """ Entry point for all requests from Logux Proxy
+
+    :param request: HTTP request from Logux Proxy server.
+
+    :return: JSON response with results of commands applying
+    """
     commands_results = list(LoguxRequest(request).apply_commands())
     for cmd_res in commands_results:
         logger.debug(cmd_res)

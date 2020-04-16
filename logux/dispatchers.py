@@ -14,7 +14,6 @@ class BaseActionDispatcher(ABC):
 
 
 class DefaultActionDispatcher(BaseActionDispatcher):
-    """ TODO: add Doc String """
     _actions: Dict[str, ActionCommand] = {}
 
     def __str__(self):
@@ -45,8 +44,6 @@ class DefaultActionDispatcher(BaseActionDispatcher):
 
 
 class DefaultChannelDispatcher(BaseActionDispatcher):
-    """ TODO: Add Doc String """
-
     _subs: Dict[str, ChannelCommand] = {}
 
     def __str__(self):

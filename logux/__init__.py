@@ -9,5 +9,3 @@ AUTHOR = __author__
 
 # Logux protocol version: https://logux.io/protocols/ws/spec/
 LOGUX_PROTOCOL_VERSION = 3
-
-# TODO: secret -> secret, ошибки теперь должены содержать meta.id, и верския в протоколе: 3

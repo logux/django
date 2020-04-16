@@ -21,6 +21,15 @@ LOGUX_SUBSCRIBE = 'logux/subscribe'
 LOGUX_UNDO = 'logux/undo'
 
 
+def protocol_version_is_supported(version: int) -> bool:
+    """ Check posobility of support protocol version.
+    :param version: proto version from request
+
+    :return: True if version is supported
+    """
+    return version == LOGUX_PROTOCOL_VERSION
+
+
 class Meta:
     """ Logux meta: https://logux.io/guide/concepts/meta/
     TODO: add docs about comp:
@@ -214,13 +223,6 @@ class Command(ABC):
         """
         raise NotImplemented()
 
-    def get_action_meta(self) -> Optional[Meta]:
-        # TODO: WTF is going on here?
-        if isinstance(self, (ActionCommand,)):
-            return self.meta
-
-        return None
-
 
 class AuthCommand(Command):
     """ Logux Auth Command provide way to check is the User authenticated.
@@ -400,13 +402,14 @@ class ActionCommand(Command):
 
         # finally
         try:
-            finally_result = [self.process(self._action, self._meta)]
+            self._finally(self._action, self._meta)
+            finally_result = []
         except Exception as finally_err:
             finally_result = ['error', self._meta.id, f'{finally_err}']
 
         applying_result.append(finally_result)
 
-        return applying_result
+        return [r for r in applying_result if len(r) != 0]
 
 
 class ChannelCommand(ActionCommand):
@@ -453,6 +456,7 @@ class ChannelCommand(ActionCommand):
         :param meta: logux meta
         :type meta: Meta
         """
+        # TODO: Should I eval UNDO by my side, or it will do logux? (can't see undo in logux server log)
         pass
 
     def apply(self) -> List[LoguxResponse]:
