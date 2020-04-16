@@ -13,7 +13,7 @@ pip install -e git://github.com/logux/django.git#egg=logux_django
 Add `path(r'logux/', include('logux.urls')),` into your `urls.py`
 
 Sets Logux settings in your `settings.py`:
-```
+```python
 # Logux settings: https://logux.io/guide/starting/proxy-server/
 LOGUX_CONTROL_SECRET = "secret"
 LOGUX_URL = "http://localhost:31338"
@@ -51,7 +51,7 @@ Actions classes requirements:
 * Register all your action handlers: `logux.actions.register(YourAction)`
 
 For example – User rename action handler:
-```
+```python
 from typing import Optional, NoReturn, Dict
 
 from django.contrib.auth.models import User
@@ -94,7 +94,7 @@ Subscription classes requirements:
 * Register all your subscription handlers: `logux.channels.register(YourChannelCommand)`
 
 For example:
-```
+```python
 from django.contrib.auth.models import User
 
 from logux.core import ChannelCommand, Action, Meta
