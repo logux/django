@@ -12,7 +12,7 @@ run:
 test:
 	source env/bin/activate && python tests/manage.py test test_app
 
-build: test
+build: clean test
 	python3 setup.py sdist bdist_wheel
 	python3 -m twine check dist/*
 
