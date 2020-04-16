@@ -165,7 +165,7 @@ class Meta:
         return json.dumps(self._raw_meta)
 
 
-def add(action: Dict, raw_meta: Optional[Dict] = None) -> NoReturn:
+def add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
     """ `add` is low level API function to send any actions and meta into Logux server.
     If `raw_meta` is None just empty dict will be passed to Logux server. Logux server
     will set `id` and `time` on this side.

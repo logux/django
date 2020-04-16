@@ -5,14 +5,14 @@ Django Logux integration engine https://logux.io/
 
 ## Installation
 
-Install using pip (dev version).
+Install using pip (dev version from current master).
 ```
 pip install -e git://github.com/logux/django.git#egg=logux_django
 ```
 
 Add `path(r'logux/', include('logux.urls')),` into your `urls.py`
 
-Sets Logux settings in your  `settings.py`:
+Sets Logux settings in your `settings.py`:
 ```
 # Logux settings: https://logux.io/guide/starting/proxy-server/
 LOGUX_CONTROL_SECRET = "secret"
@@ -20,9 +20,13 @@ LOGUX_URL = "http://localhost:31338"
 LOGUX_AUTH_FUNC = your_auth_function #  your_auth_function(user_id, token: str) -> bool
 ```
 
-For urls and settings examples, please checkout `test_app` [settings](https://github.com/logux/django/blob/master/tests/test_project/settings.py)
+_Storing passwords or secrets in `settings.py` is bad practice. Use ENV._
 
-Keep in mind: the path in your `urls.py` (`logux/`) and the `LOGUX_CONTROL_SECRET` from the settings should be passed into [Logux Server](https://logux.io/guide/starting/proxy-server/#creating-the-project) by ENV as 
+For urls and settings examples, please checkout `test_app` 
+[settings](https://github.com/logux/django/blob/master/tests/test_project/settings.py)
+
+Keep in mind: the path in your `urls.py` (`logux/`) and the `LOGUX_CONTROL_SECRET` from the settings should be passed 
+into [Logux Server](https://logux.io/guide/starting/proxy-server/#creating-the-project) by ENV as 
 `LOGUX_BACKEND` and `LOGUX_CONTROL_SECRET` respectively. 
 
 For example: 
@@ -35,23 +39,24 @@ LOGUX_CONTROL_SECRET=secret
 
 ### Actions
 
-For `action` handling add `logux_actions.py` file in your app, and implement `ActionCommand` inheritors. 
+For `action` handling add `logux_actions.py` file in your app, add `ActionCommand` inheritors and implement all his
+abstract methods. 
 
 Actions classes requirements:
 
 * Set `action_type: str`
 * Implement all `ActionCommand` abstracts methods
-* Implement `resend` and `process` methods (optional)
+* Implement `resend` and `process` methods if you need (optional)
 * import `logux` dispatcher: `from logux.dispatchers import logux`
 * Register all your action handlers: `logux.actions.register(YourAction)`
 
 For example – User rename action handler:
 ```
-from typing import Optional
+from typing import Optional, NoReturn, Dict
 
 from django.contrib.auth.models import User
 
-from logux.core import ActionCommand, Meta, LoguxResponse, Action
+from logux.core import ActionCommand, Meta, Action
 from logux.dispatchers import logux
 
 
@@ -59,48 +64,37 @@ class RenameUserAction(ActionCommand):
     """ Action Handler for example from https://logux.io/protocols/backend/examples/ """
 
     action_type = 'user/rename'
-
-    def resend(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
-        return ['resend', meta.id, {'channels': [f'users/{action["user"]}']}]
-
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
-        # user can rename only himself
-        return action['user'] == int(meta.user_id)
-
-    def process(self, action: Action, meta: Optional[Meta]) -> LoguxResponse:
-            try:
-                user = User.objects.get(pk=action['user'])
-                user.first_name = action['name']
-                user.save()
-            except User.DoesNotExist as err:
-                self.undo(
-                    meta,
-                    reason='user does not exist',
-                    extra={'original_exception': f'{err}'}
-                )
-                return ['error', meta.id, f'{err}']
-
-            return ['processed', meta.id]
+    
+        def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
+            return {'channels': [f'users/{action["user"]}']}
+    
+        def access(self, action: Action, meta: Meta) -> bool:
+            # user can rename only himself
+            return action['user'] == int(meta.user_id)
+    
+        def process(self, action: Action, meta: Optional[Meta]) -> NoReturn:
+            user = User.objects.get(pk=action['user'])
+            user.first_name = action['name']
+            user.save()
 
 logux.actions.register(RenameUserAction)
 
 ```
 
-### Subscription
+### Channels (Subscription)
 
-For `subsription` handling add `logux_subsriptions.py` file in your app, and implement `ChannelCommand` inheritors. 
+For `subsription` handling add `logux_subsriptions.py` file in your app, and `ChannelCommand` inheritors 
+and implement all his abstract methods. 
 
 Subscription classes requirements:
 
 * Set `channel_pattern: str` – this is a regexp like Django's url's patters in `urls.py`
 * Implement all `ChannelCommand` abstracts methods
 * import `logux` dispatcher: `from logux.dispatchers import logux`
-* Register all your subscription handlers: `logux.subscriptions.register(YourSubscription)`
+* Register all your subscription handlers: `logux.channels.register(YourChannelCommand)`
 
 For example:
 ```
-from typing import Optional
-
 from django.contrib.auth.models import User
 
 from logux.core import ChannelCommand, Action, Meta
@@ -108,32 +102,34 @@ from logux.dispatchers import logux
 
 
 class UserChannel(ChannelCommand):
-    """ Subscription Handler for example from https://logux.io/protocols/backend/examples/ """
-
     channel_pattern = r'^user/(?P<user_id>\w+)$'
 
-    def load(self, action: Action, meta: Meta):
-        try:
-            user = User.objects.get(pk=self.params['user_id'])
-        except User.DoesNotExist as err:
-            self.undo(meta, 'user does not exist', {'original_exception': f'{err}'})
-            return ['processed', self.meta.id]
+    def access(self, action: Action, meta: Meta) -> bool:
+        return self.params['user_id'] == meta.user_id
 
+    def load(self, action: Action, meta: Meta):
+        user = User.objects.get(pk=self.params['user_id'])
         self.send_back(
             {'type': 'user/name', 'user': 38, 'name': user.first_name}
         )
 
-        return ['processed', self.meta.id]
 
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
-        return self.params['user_id'] == meta.user_id
-
-
-logux.subscriptions.register(UserChannel)
+logux.channels.register(UserChannel)
 
 ```
 
 For more examples, please checkout `test app` (tests/test_app)
+
+### Utils
+
+#### logux.core.add
+`add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn` is low level API function to send any actions and meta into Logux server.
+
+If `raw_meta` is `None` just empty Dict will be passed to Logux server.
+
+Keep in mind, in the current version `add` is sync.
+
+For more information: https://logux.io/node-api/#log-add
 
 ## Development
 
