@@ -1,12 +1,17 @@
-# logux-django
+# Logux Django
 Django Logux integration engine https://logux.io/
 
 **Do not use this package until first stable version will be released!**
 
 ## Installation
 
-Install using pip (dev version from current master).
+Install from PyPI
+```shell script
+pip install logux-django
 ```
+
+Install dev version from current master.
+```shell script
 pip install -e git://github.com/logux/django.git#egg=logux_django
 ```
 
@@ -30,7 +35,7 @@ into [Logux Server](https://logux.io/guide/starting/proxy-server/#creating-the-p
 `LOGUX_BACKEND` and `LOGUX_CONTROL_SECRET` respectively. 
 
 For example: 
-```
+```shell script
 LOGUX_BACKEND=http://localhost:8000/logux/
 LOGUX_CONTROL_SECRET=secret
 ```
@@ -134,14 +139,14 @@ For more information: https://logux.io/node-api/#log-add
 ## Development
 
 Create dev environment
-```
+```shell script
 make venv
 make install
 make run
 ```
 
 Test:
-```
+```shell script
 make test
 ```
 
