@@ -82,6 +82,7 @@ class RenameUserAction(ActionCommand):
             user.first_name = action['name']
             user.save()
 
+
 logux.actions.register(RenameUserAction)
 
 ```
