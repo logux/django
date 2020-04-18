@@ -7,16 +7,17 @@ from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 
 from logux import settings
-from logux.core import AuthCommand, LoguxResponse, UnknownAction, Command, LOGUX_SUBSCRIBE, \
+from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SUBSCRIBE, \
     protocol_version_is_supported
 from logux.dispatchers import logux
+from logux.exceptions import LoguxProxyException
 from logux.settings import LOGUX_CONTROL_SECRET
 
 logger = logging.getLogger(__name__)
 
 
 class LoguxRequest:
-    """ LoguxRequest is class for deserialized request from Logux Server proxy
+    """ LoguxValue is class for deserialized request from Logux Server proxy
 
     The constructor should extract common fields like `version` and `secret` and parse list of commands.
 
@@ -47,7 +48,7 @@ class LoguxRequest:
         # TODO: should I crush App here?
         if not protocol_version_is_supported(self.version):
             # TODO: extract to custom logux exception
-            raise Exception(f'Unsupported protocol version: {self.version}')
+            raise LoguxProxyException(f'Unsupported protocol version: {self.version}')
 
         self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
@@ -93,15 +94,15 @@ class LoguxRequest:
         """ Check Logux proxy server secret """
         return self._body['secret'] == LOGUX_CONTROL_SECRET
 
-    def apply_commands(self) -> Iterable[LoguxResponse]:
+    def apply_commands(self) -> Iterable[LoguxValue]:
         if not self._is_server_authenticated():
             # TODO: extract to common way to error response
             err_msg = 'Unauthorised Logux proxy server'
             logger.warning(err_msg)
-            return [['error', {}, err_msg]]
+            return [LoguxValue(['error', {}, err_msg])]
 
         if len(self.commands) == 0:
-            return [['error', {}, f'command list is empty']]
+            return [LoguxValue(['error', {}, f'command list is empty'])]
 
         return filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands]))
 

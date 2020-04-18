@@ -1,4 +1,4 @@
-from typing import Optional, NoReturn, Dict
+from typing import Optional, Dict
 
 from django.contrib.auth.models import User
 
@@ -46,7 +46,7 @@ class RenameUserAction(ActionCommand):
         # user can rename only himself
         return action['user'] == int(meta.user_id)
 
-    def process(self, action: Action, meta: Optional[Meta]) -> NoReturn:
+    def process(self, action: Action, meta: Optional[Meta]) -> None:
         user = User.objects.get(pk=action['user'])
         user.first_name = action['name']
         user.save()

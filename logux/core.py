@@ -6,15 +6,18 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict, NoReturn
+from typing import List, Callable, Optional, Dict, NoReturn, NewType, Union, Sequence, Any
 
 import requests
 from django.conf import settings
 
 from logux import LOGUX_PROTOCOL_VERSION
+from logux.exceptions import LoguxProxyException
 
-LoguxResponse = LoguxRequest = List[str]
-Action = Dict[str, str]
+# Logux requests \ response data format
+LoguxValue = NewType("LoguxValue", Sequence[Union[Dict, str]])
+
+Action = Dict[str, Any]
 logger = logging.getLogger(__name__)
 
 LOGUX_SUBSCRIBE = 'logux/subscribe'
@@ -22,8 +25,8 @@ LOGUX_UNDO = 'logux/undo'
 
 
 def protocol_version_is_supported(version: int) -> bool:
-    """ Check posobility of support protocol version.
-    :param version: proto version from request
+    """ Check possibility of support protocol version.
+    :param version: the proto version from request
 
     :return: True if version is supported
     """
@@ -49,16 +52,16 @@ class Meta:
 
         self.user_id: str = self._get_user_id()
         self.client_id: str = self._get_client_id()
-        self.node_id: str = self._get_node_id()
+        self.node_id: Optional[str] = self._get_node_id()
         self.time: datetime = self._get_time()
 
     def __getitem__(self, item):
         return self._raw_meta[item]
 
-    def __eq__(self, o: Meta) -> bool:
+    def __eq__(self, o) -> bool:
         return self.time == o.time and self.id == o.id
 
-    def __ne__(self, o: Meta) -> bool:
+    def __ne__(self, o) -> bool:
         return not self.__eq__(o)
 
     def __lt__(self, other: Meta) -> bool:
@@ -162,7 +165,7 @@ class Meta:
         return json.dumps(self._raw_meta)
 
 
-def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
+def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
     """ `logux_add` is low level API function to send any actions and meta into Logux server.
     If `raw_meta` is None just empty dict will be passed to Logux server. Logux server
     will set `id` and `time` on this side.
@@ -198,26 +201,26 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
 
     if r.status_code != 200:
         logger.error(f'`logux_add` to Logux is failed! err: {r.status_code}: {r.text}')
-        raise Exception(f'Non 200 response from Logux Proxy (logux_add): {r.status_code}: {r.text}')
+        raise LoguxProxyException(f'Non 200 response from Logux Proxy (logux_add): {r.status_code}: {r.text}')
 
 
 class Command(ABC):
     """ Logux Command abstract class.
     All type of Logux Commands should be inheritance from this one.
 
-    Required ony one method `apply()` witch executing command and return LoguxResponse
+    Required ony one method `apply()` witch executing command and return LoguxValue
       with an answer or error a message.
     """
 
     @abstractmethod
-    def apply(self) -> LoguxResponse:
+    def apply(self) -> List[LoguxValue]:
         """
          This method consistently apply all Action methods inside of try/catch and construct List of
-        LoguxResponse's with action methods results or error messages.
+        LoguxValue's with action methods results or error messages.
 
         :return: list of results of applying all actions methods
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class AuthCommand(Command):
@@ -225,8 +228,11 @@ class AuthCommand(Command):
 
     TODO: this class should be ActionCommand probably
     """
+    user_id: str
+    token: str
+    auth_id: str
 
-    def __init__(self, cmd_body: LoguxRequest, logux_auth: Callable[[str, str], bool]):
+    def __init__(self, cmd_body: Dict[str, str], logux_auth: Callable[[str, str], bool]):
         """ Construct Auth cmd from raw logux command.
 
         :param cmd_body: raw logux command, like ["auth", "38", "good-token", "gf4Ygi6grYZYDH5Z2BsoR"]
@@ -239,14 +245,15 @@ class AuthCommand(Command):
         _, self.user_id, self.token, self.auth_id = cmd_body
         self.logux_auth = logux_auth
 
-    def apply(self) -> List[LoguxResponse]:
+    def apply(self) -> List[LoguxValue]:
         """ Applying auth command
 
         :returns:  `authenticated` or `denied` action dependently if user is authenticated.
         """
-        is_authenticated = self.logux_auth(self.user_id, self.token)
+        is_authenticated: bool = self.logux_auth(self.user_id, self.token)
         logger.warning(f'user: {self.user_id} is not authenticated')
-        return [[f'{"authenticated" if is_authenticated else "denied"}', self.auth_id]]
+        auth_id: str = self.auth_id
+        return [LoguxValue(['authenticated' if is_authenticated else 'denied', auth_id])]
 
 
 class ActionCommand(Command):
@@ -254,7 +261,7 @@ class ActionCommand(Command):
     """
     # `action_type` is a required property, if the property does not defined
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
-    action_type: Optional[str] = None
+    action_type: str
 
     def __init__(self, cmd_body: List[Action]):
         """ Construct Action cmd from raw logux command.
@@ -280,7 +287,7 @@ class ActionCommand(Command):
         # do not change internal meta state from outside
         return deepcopy(self._meta)
 
-    def send_back(self, action: Action, raw_meta: Optional[Dict] = None) -> NoReturn:
+    def send_back(self, action: Action, raw_meta: Optional[Dict] = None) -> None:
         """ Sand action with meta back to Logux. Will add `clients` from original action to the meta.
         For more information: https://logux.io/guide/concepts/action/#adding-actions-on-the-server
 
@@ -304,7 +311,7 @@ class ActionCommand(Command):
             'type': LOGUX_UNDO,
             'id': self.meta.id,
             'reason': reason,
-            **extra
+            **extra  # type: ignore
         }
 
         raw_meta = self.meta.get_raw_meta()
@@ -324,9 +331,9 @@ class ActionCommand(Command):
         logux_add(undo_action, undo_meta)
 
     # Required and optional action methods (these methods should be implemented by consumer)
-    def _finally(self, action: Action, meta: Meta) -> LoguxResponse:  # noqa
+    def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # type: ignore
         """ Callback which will be run on the end of action/subscription processing or on an error """
-        return []
+        return LoguxValue([])
 
     @abstractmethod
     def access(self, action: Action, meta: Meta) -> bool:
@@ -339,7 +346,7 @@ class ActionCommand(Command):
 
         :returns: does current user have permission for apply this action?
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
         """ `resend` should return recipients for this action.
@@ -358,7 +365,7 @@ class ActionCommand(Command):
         """
         return {}
 
-    def process(self, action: Action, meta: Meta) -> NoReturn:
+    def process(self, action: Action, meta: Meta) -> None:
         """ `process` should contain consumer business code. If it raised exception,
         self.apply will return error action automatically. If `process` return error action
         Logux server will eval `undo` by this side.
@@ -370,7 +377,7 @@ class ActionCommand(Command):
         """
         pass
 
-    def apply(self) -> List[LoguxResponse]:
+    def apply(self) -> List[LoguxValue]:
         applying_result = []
 
         # resend
@@ -404,7 +411,9 @@ class ActionCommand(Command):
 
         applying_result.append(finally_result)
 
-        return [r for r in applying_result if len(r) != 0]
+        # TODO: what wrong with this type?
+        # noinspection PyTypeChecker
+        return [r for r in applying_result if len(r) != 0]  # type: ignore
 
 
 class ChannelCommand(ActionCommand):
@@ -424,7 +433,7 @@ class ChannelCommand(ActionCommand):
     #   ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
     action_type = LOGUX_SUBSCRIBE
     # regexp, like in urls.py
-    channel_pattern: Optional[str] = None
+    channel_pattern: str
 
     def __init__(self, cmd_body: List[Action]):
         super().__init__(cmd_body)
@@ -432,11 +441,11 @@ class ChannelCommand(ActionCommand):
         self.params = self._parse_params()
 
     def _parse_params(self) -> Dict:
-        return re.match(self.channel_pattern, self.channel).groupdict()
+        return re.match(self.channel_pattern, self.channel).groupdict()  # type: ignore
 
     @classmethod
     def is_match(cls, channel: str) -> bool:
-        return True if re.match(cls.channel_pattern, channel) else None
+        return True if re.match(cls.channel_pattern, channel) is not None else False  # type: ignore
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
@@ -451,10 +460,9 @@ class ChannelCommand(ActionCommand):
         :param meta: logux meta
         :type meta: Meta
         """
-        # TODO: Should I eval UNDO by my side, or it will do logux? (can't see undo in logux server log)
         pass
 
-    def apply(self) -> List[LoguxResponse]:
+    def apply(self) -> List[LoguxValue]:
         applying_result = []
 
         # access
@@ -471,7 +479,7 @@ class ChannelCommand(ActionCommand):
             except Exception as load_err:
                 load_result = ['error', self._meta.id, f'{load_err}']
 
-            applying_result.append(load_result)
+            applying_result.append(LoguxValue(load_result))
 
         return applying_result
 
@@ -484,5 +492,5 @@ class UnknownAction(ActionCommand):
     def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return False
 
-    def apply(self) -> List[LoguxResponse]:
-        return [['unknownAction', self._meta.id]]
+    def apply(self) -> List[LoguxValue]:
+        return [LoguxValue(['unknownAction', self._meta.id])]

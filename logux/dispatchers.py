@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 class BaseActionDispatcher(ABC):
     @abstractmethod
     def register(self, action: ActionCommand):
-        raise NotImplemented
+        raise NotImplementedError()
 
 
 class DefaultActionDispatcher(BaseActionDispatcher):
-    _actions: Dict[str, ActionCommand] = {}
+    _actions: Dict[str, Type[ActionCommand]] = {}
 
     def __str__(self):
         return ', '.join([k for k in self._actions])
@@ -22,7 +22,7 @@ class DefaultActionDispatcher(BaseActionDispatcher):
     def __getitem__(self, action_type: str):
         return self._actions[action_type]
 
-    def _action_is_valid(self, action: ActionCommand) -> bool:
+    def _action_is_valid(self, action: Type[ActionCommand]) -> bool:
         if not action.action_type:
             raise ValueError('`action_type` attribute is required for all Actions')
 
@@ -37,19 +37,19 @@ class DefaultActionDispatcher(BaseActionDispatcher):
     def has_action(self, action_type: str) -> bool:
         return action_type in self._actions
 
-    def register(self, action: ActionCommand):
+    def register(self, action: Type[ActionCommand]):  # type: ignore # noqa
         if self._action_is_valid(action):
             logger.info(f'registering action `{action.action_type}`')
             self._actions[action.action_type] = action
 
 
 class DefaultChannelDispatcher(BaseActionDispatcher):
-    _subs: Dict[str, ChannelCommand] = {}
+    _subs: Dict[str, Type[ChannelCommand]] = {}
 
     def __str__(self):
         return ', '.join([k for k in self._subs])
 
-    def __getitem__(self, item: str) -> Union[ChannelCommand, Type[UnknownAction]]:
+    def __getitem__(self, item: str) -> Union[Type[ChannelCommand], Type[UnknownAction]]:
         for sub in self._subs.values():
             if sub.is_match(channel=item):
                 return sub
@@ -78,7 +78,7 @@ class DefaultChannelDispatcher(BaseActionDispatcher):
 
         return True
 
-    def register(self, sub: ChannelCommand):
+    def register(self, sub: Type[ChannelCommand]):  # type: ignore # noqa
         if self._sub_is_valid(sub):
             logger.info(f'registering subscription for `{sub.channel_pattern}`')
             self._subs[sub.channel_pattern] = sub
@@ -92,4 +92,4 @@ class DefaultDispatcher:
 
 logux = DefaultDispatcher()
 
-__all__ = [logux]
+__all__ = ['logux']
