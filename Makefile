@@ -1,4 +1,4 @@
-.PHONY: venv install run test build release clean release_test release_production
+.PHONY: venv install run test build release clean release_test release_production lint
 
 venv:
 	python3 -m venv env
@@ -10,9 +10,9 @@ run:
 	./env/bin/python tests/manage.py runserver
 
 test:
-	source env/bin/activate && python tests/manage.py test test_app
+	./env/bin/python tests/manage.py test test_app
 
-build: clean test
+build: clean test lint
 	python3 setup.py sdist bdist_wheel
 	python3 -m twine check dist/*
 
@@ -24,3 +24,8 @@ release_production: build
 
 clean:
 	rm -rf ./dist ./build ./logux_django.egg-info
+
+lint:
+	flake8 ./logux --count --select=E9,F63,F7,F82 --show-source --statistics
+	flake8 ./logux --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+	mypy --config-file mypy.ini ./logux

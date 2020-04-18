@@ -146,6 +146,11 @@ make install
 make run
 ```
 
+Type checking and linting:
+```shell script
+make lint
+```
+
 Test:
 ```shell script
 make test
