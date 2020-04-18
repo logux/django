@@ -16,10 +16,10 @@ build: clean test
 	python3 setup.py sdist bdist_wheel
 	python3 -m twine check dist/*
 
-release_test:
+release_test: build
 	python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
-release_production:
+release_production: build
 	python3 -m twine upload dist/*
 
 clean:
