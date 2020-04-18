@@ -5,12 +5,7 @@ python:
 env:
     - DJANGO_VERSION=2.2.11
     - DJANGO_VERSION=2.2.12
-    - DJANGO_VERSION=<3
-cache:
-    directories:
-        - "$HOME/.cache/pip"
 install:
-    # tooling
     - pip install mypy==0.770 flake8==3.7.9
     - pip install -q Django==$DJANGO_VERSION
     - python setup.py -q install
