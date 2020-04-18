@@ -7,8 +7,8 @@ setup(
     version=VERSION,
     packages=find_packages(exclude=['tests*']),
     install_requires=[
-        "django>=2.2.12,<3",
-        "requests>=2.23.0"
+        "django>=2.2.11,<3",
+        "requests>=2.22.0"
     ],
     python_requires=">=3.7",
     url='https://github.com/logux/django/',
