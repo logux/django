@@ -24,14 +24,14 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies with ${{ django.python-version }}
+    - name: Install dependencies with ${{ matrix.django-version }}
       run: |
         python -m pip install --upgrade pip
         pip install -q mypy==0.770 flake8==3.7.9
-        pip install -q Django==${{ django.python-version }}
+        pip install -q Django==${{ matrix.django-version }}
         python setup.py -q install
-        with:
-          django.python-version: ${{ django.python-version }}
+      with:
+        django.python-version: ${{ matrix.django-version }}
     - name: Lint with flake8 and mypy
       run: |
         make lint
