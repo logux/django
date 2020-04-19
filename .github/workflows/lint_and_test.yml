@@ -30,8 +30,6 @@ jobs:
         pip install -q mypy==0.770 flake8==3.7.9
         pip install -q Django==${{ matrix.django-version }}
         python setup.py -q install
-      with:
-        django.python-version: ${{ matrix.django-version }}
     - name: Lint with flake8 and mypy
       run: |
         make lint
