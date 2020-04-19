@@ -34,7 +34,6 @@ jobs:
     - name: Lint with flake8 and mypy
       run: |
         make lint
-        env
     - name: Test
       run: |
-        make ci_test
+        export DJANGO_SETTINGS_MODULE="tests/test_project/settings.py" && make ci_test
