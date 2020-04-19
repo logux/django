@@ -63,12 +63,6 @@ class ProxyAuthTestCase(LoguxTestCase):
         self.assertEqual(r[0][2], 'Unauthorised Logux proxy server')
 
 
-class WrongLoguxCommandTypeTestCase(TestCase):
-    """ Handling non allowed Logux command types """
-    # TODO: first I need figure out: should I raise an exceptions for wrong cmd types
-    pass
-
-
 class LoguxActionCommandTestCase(LoguxTestCase):
     def test_property_getters(self):
         """ Tests for Action helpers """
@@ -202,7 +196,3 @@ class LoguxServerErrorsTestCase(LoguxTestCase):
         })
 
         self.assertEqual(r[0], ['unknownAction', '1560954012838 38:Y7bysd:O0ETfc 0'])
-
-
-class LoguxSubscriptionTestCase(LoguxTestCase):
-    pass
