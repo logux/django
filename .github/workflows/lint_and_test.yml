@@ -36,4 +36,4 @@ jobs:
         make lint
     - name: Test
       run: |
-        export DJANGO_SETTINGS_MODULE="tests/test_project/settings.py" && make ci_test
+        make ci_test

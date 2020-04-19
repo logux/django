@@ -13,7 +13,7 @@ test:
 	./env/bin/python tests/manage.py test test_app
 
 ci_test:
-	python tests/manage.py test test_app
+	export PYTHONPATH=$PYTHONPATH:$(pwd) && python tests/manage.py test test_app
 
 build: clean test lint
 	python3 setup.py sdist bdist_wheel
