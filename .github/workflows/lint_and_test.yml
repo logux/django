@@ -34,6 +34,7 @@ jobs:
     - name: Lint with flake8 and mypy
       run: |
         make lint
+        env
     - name: Test
       run: |
         make ci_test
