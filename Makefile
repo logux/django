@@ -1,4 +1,4 @@
-.PHONY: venv install run test build release clean release_test release_production lint
+.PHONY: venv install run test ci_test build release clean release_test release_production lint
 
 venv:
 	python3 -m venv env
@@ -11,6 +11,9 @@ run:
 
 test:
 	./env/bin/python tests/manage.py test test_app
+
+ci_test:
+	python tests/manage.py test test_app
 
 build: clean test lint
 	python3 setup.py sdist bdist_wheel

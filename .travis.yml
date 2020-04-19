@@ -11,4 +11,4 @@ install:
     - python setup.py -q install
 script:
     - make lint
-    - make test
+    - make ci_test
