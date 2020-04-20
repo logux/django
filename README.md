@@ -61,7 +61,7 @@ Actions classes requirements:
 
 For example – User rename action handler:
 ```python
-from typing import Optional, NoReturn, Dict
+from typing import Optional, Dict
 
 from django.contrib.auth.models import User
 
@@ -81,7 +81,7 @@ class RenameUserAction(ActionCommand):
             # user can rename only himself
             return action['user'] == int(meta.user_id)
     
-        def process(self, action: Action, meta: Optional[Meta]) -> NoReturn:
+        def process(self, action: Action, meta: Optional[Meta]) -> None:
             user = User.objects.get(pk=action['user'])
             user.first_name = action['name']
             user.save()
@@ -133,7 +133,7 @@ For more examples, please checkout `test app` (tests/test_app)
 ### Utils
 
 #### logux.core.logux_add
-`logux_add(action: Action, raw_meta: Optional[Dict] = None) -> NoReturn` is low level API function to send any actions and meta into Logux server.
+`logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None` is low level API function to send any actions and meta into Logux server.
 
 If `raw_meta` is `None` just empty Dict will be passed to Logux server.
 
