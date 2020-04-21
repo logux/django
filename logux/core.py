@@ -6,7 +6,7 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict, NoReturn, NewType, Union, Sequence, Any
+from typing import List, Callable, Optional, Dict, NewType, Union, Sequence, Any
 
 import requests
 from django.conf import settings
@@ -180,7 +180,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
     TODO: extract this exception into custom error class -> logux/exception.py
     :raises: base Exception() if Logux Proxy returns non 200 response code
 
-    :return: NoReturn
+    :return: None
     """
     command = {
         "version": LOGUX_PROTOCOL_VERSION,
@@ -449,7 +449,7 @@ class ChannelCommand(ActionCommand):
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta) -> NoReturn:
+    def load(self, action: Action, meta: Meta) -> None:
         """ `load` should contain consumer code for applying subscription.
         Generally this method is almost the same as `process`. If it raised exception,
         self.apply will return error action automatically. If `load` return error action
