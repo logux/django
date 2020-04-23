@@ -351,7 +351,7 @@ class ActionCommand(Command):
     def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
         """ `resend` should return recipients for this action.
         It should look like:
-            {'channels': ['users/38']}
+        {'channels': ['users/38']}
         and may content fields: channels, users, nodes, clients.
 
         For more information: https://logux.io/node-api/#resend
@@ -422,11 +422,11 @@ class ChannelCommand(ActionCommand):
     For more information: https://logux.io/protocols/backend/examples/#subscription
 
     Subscription actions should look like:
-        [
-          "action",
-          { type: 'logux/subscribe', channel: '38/name' },
-          { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
-        ]
+    [
+        "action",
+        { type: 'logux/subscribe', channel: '38/name' },
+        { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
+    ]
     """
     # `channel_pattern` is required property, if property does not defined
     #   DefaultSubscriptionsDispatcher will raise

@@ -1,4 +1,4 @@
-.PHONY: venv install run test ci_test build release clean release_test release_production lint
+.PHONY: venv install run test ci_test build release clean release_test release_production lint docs
 
 venv:
 	python3 -m venv env
@@ -32,3 +32,6 @@ lint:
 	flake8 ./logux --count --select=E9,F63,F7,F82 --show-source --statistics
 	flake8 ./logux --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 	mypy --config-file mypy.ini ./logux
+
+docs:
+	cd docs && make clean && make html
