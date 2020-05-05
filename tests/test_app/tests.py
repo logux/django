@@ -94,8 +94,8 @@ class LoguxActionCommandTestCase(LoguxTestCase):
         """ Tests for meta compering """
 
         # time of m2 gt
-        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': 1560954012838})  # '2019-06-20 00:20:12.838000'
-        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 1', 'time': 1560954012848})  # '2019-06-20 00:20:12.848000'
+        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': '1560954012838'})  # '2019-06-20 00:20:12.838000'
+        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 1', 'time': '1560954012848'})  # '2019-06-20 00:20:12.848000'
 
         self.assertTrue(m1 < m2)
         self.assertTrue(m1 != m2)
@@ -103,8 +103,8 @@ class LoguxActionCommandTestCase(LoguxTestCase):
         self.assertFalse(m1 == m2)
 
         # times is eq, but counter m2 is gt
-        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': 1560954012838})
-        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 1', 'time': 1560954012838})
+        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': '1560954012838'})
+        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 1', 'time': '1560954012838'})
 
         self.assertTrue(m1 < m2)
         self.assertTrue(m1 != m2)
@@ -112,8 +112,8 @@ class LoguxActionCommandTestCase(LoguxTestCase):
         self.assertFalse(m1 == m2)
 
         # times is eq, counters is eq, but client_id m2 is gt
-        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': 1560954012838})
-        m2 = Meta({'id': '1560954012838 38:Z7bysd:O0ETfc 0', 'time': 1560954012838})
+        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': '1560954012838'})
+        m2 = Meta({'id': '1560954012838 38:Z7bysd:O0ETfc 0', 'time': '1560954012838'})
 
         self.assertTrue(m1 < m2)
         self.assertTrue(m1 != m2)
@@ -121,8 +121,8 @@ class LoguxActionCommandTestCase(LoguxTestCase):
         self.assertFalse(m1 == m2)
 
         # m1 and m2 – compactly eq
-        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': 1560954012838})
-        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': 1560954012838})
+        m1 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': '1560954012838'})
+        m2 = Meta({'id': '1560954012838 38:Y7bysd:O0ETfc 0', 'time': '1560954012838'})
 
         self.assertFalse(m1 < m2)
         self.assertFalse(m1 != m2)
