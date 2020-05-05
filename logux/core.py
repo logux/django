@@ -55,6 +55,8 @@ class Meta:
         self.node_id: Optional[str] = self._get_node_id()
         self.time: datetime = self._get_time()
 
+        self.subprotocol: str = self._get_subprotocol()
+
     def __getitem__(self, item):
         return self._raw_meta[item]
 
@@ -157,6 +159,9 @@ class Meta:
          datetime from meta.id[0]
          """
         return datetime.fromtimestamp(int(self.id.split(' ')[0]) / 1e3)
+
+    def _get_subprotocol(self):
+        return self._raw_meta.get('subprotocol')
 
     def get_raw_meta(self) -> Dict:
         return deepcopy(self._raw_meta)
@@ -263,7 +268,7 @@ class ActionCommand(Command):
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
 
-    def __init__(self, cmd_body: List[Action]):
+    def __init__(self, cmd_body: List):
         """ Construct Action cmd from raw logux command.
 
         :param cmd_body: raw logux cmd, like:
