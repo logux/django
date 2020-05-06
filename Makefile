@@ -31,6 +31,9 @@ build: clean test lint  ## Build package
 	python3 setup.py sdist bdist_wheel
 	python3 -m twine check dist/*
 
+changelog:  ## Generate changelog
+	conventional-changelog -p angular -i CHANGELOG.md -s
+
 release_test: build  ## Release package on test PyPI server
 	python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
