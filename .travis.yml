@@ -6,7 +6,7 @@ env:
     - DJANGO_VERSION=2.2.11
     - DJANGO_VERSION=2.2.12
 install:
-    - pip install mypy==0.770 flake8==3.7.9
+    - make deps
     - pip install -q Django==$DJANGO_VERSION
     - python setup.py -q install
 script:

@@ -20,20 +20,20 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies with ${{ matrix.django-version }}
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install mypy==0.770 flake8==3.7.9 Django==${{ matrix.django-version }}
-        python -m pip install Django==${{ matrix.django-version }}
-        python setup.py install
-    - name: Lint with flake8 and mypy
-      run: |
-        make lint
-    - name: Test
-      run: |
-        make ci_test
+        -   uses: actions/checkout@v2
+        -   name: Set up Python ${{ matrix.python-version }}
+            uses: actions/setup-python@v1
+            with:
+                python-version: ${{ matrix.python-version }}
+        -   name: Install dependencies with ${{ matrix.django-version }}
+            run: |
+                python -m pip install --upgrade pip
+                make deps
+                python -m pip install Django==${{ matrix.django-version }}
+                python setup.py install
+        -   name: Lint with flake8, pylint and mypy
+            run: |
+                make lint
+        -   name: Test
+            run: |
+                make ci_test
