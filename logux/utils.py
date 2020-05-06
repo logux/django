@@ -9,7 +9,7 @@ def autodiscover():
     when not present. This forces an import on them to register any logux bits
     they may want.
     """
-    global _autodiscovered
+    global _autodiscovered  # pylint: disable=global-statement
 
     if _autodiscovered:
         return

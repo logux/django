@@ -1,3 +1,6 @@
+"""
+    Django Logux integration engine: https://logux.io
+"""
 __title__ = 'Django Logux integration engine'
 __version__ = "0.1.1"
 __author__ = 'Vadim Iskuchekov @egregors'

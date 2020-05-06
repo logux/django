@@ -60,33 +60,33 @@ class LoguxRequest:
             cmd_type = cmd[0]
 
             if cmd_type == self.CommandType.AUTH:
-                logger.debug(f'got auth cmd: {cmd}')
+                logger.debug('got auth cmd: %s', cmd)
                 commands.append(AuthCommand(cmd, settings.LOGUX_AUTH_FUNC))
 
             elif cmd_type == self.CommandType.ACTION:
-                logger.debug(f'got action: {cmd}')
+                logger.debug('got action: %s', cmd)
                 action_type = cmd[1]['type']
 
                 # subscribe actions
                 if action_type == LOGUX_SUBSCRIBE:
                     channel = cmd[1]["channel"]
-                    logger.debug(f'got subscription for channel: {channel}')
+                    logger.debug('got subscription for channel: %s', channel)
                     commands.append(logux.channels[channel](cmd))
                     continue
 
                 # custom actions
                 if not logux.actions.has_action(action_type):
-                    logger.error(f'unknown action: {action_type}')
+                    logger.error('unknown action: %s', action_type)
                     commands.append(UnknownAction(cmd))
                     continue
 
                 commands.append(logux.actions[action_type](cmd))
 
             else:
-                logger.error(f'wrong command type: {cmd}')
-                err_msg = f'wrong command type: {cmd_type}, expected {[c_type for c_type in self.CommandType.choices]}'
+                logger.error('wrong command type: %s', cmd)
+                err_msg = f'wrong command type: {cmd_type}, expected {self.CommandType.choices}'
                 logger.error(err_msg)
-                logger.warning(f'command with wrong type will be ignored')
+                logger.warning('command with wrong type will be ignored')
 
         return commands
 
@@ -95,6 +95,10 @@ class LoguxRequest:
         return self._body['secret'] == LOGUX_CONTROL_SECRET
 
     def apply_commands(self) -> Iterable[LoguxValue]:
+        """ Apply all actions commands one by one
+
+        :return: List of command applying results
+        """
         if not self._is_server_authenticated():
             # TODO: extract to common way to error response
             err_msg = 'Unauthorised Logux proxy server'
@@ -102,7 +106,7 @@ class LoguxRequest:
             return [LoguxValue(['error', {}, err_msg])]
 
         if len(self.commands) == 0:
-            return [LoguxValue(['error', {}, f'command list is empty'])]
+            return [LoguxValue(['error', {}, 'command list is empty'])]
 
         return filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands]))
 

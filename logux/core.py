@@ -1,3 +1,6 @@
+"""
+Core of Logux Django
+"""
 from __future__ import annotations
 
 import json
@@ -33,7 +36,7 @@ def protocol_version_is_supported(version: int) -> bool:
     return version == LOGUX_PROTOCOL_VERSION
 
 
-class Meta:
+class Meta:  # pylint: disable=too-many-instance-attributes
     """ Logux meta: https://logux.io/guide/concepts/meta/
     TODO: add docs about comp:
       https://github.com/logux/django/issues/12#issuecomment-612394901
@@ -67,9 +70,13 @@ class Meta:
         return not self.__eq__(o)
 
     def __lt__(self, other: Meta) -> bool:
+        # pylint: disable=no-else-return,too-many-return-statements
         # <
-        if self.get_raw_meta() and not other.get_raw_meta():
-            return False
+        if self.get_raw_meta():
+            if not other.get_raw_meta():
+                return False
+            elif not self.get_raw_meta() and other.get_raw_meta():
+                return True
         elif not self.get_raw_meta() and other.get_raw_meta():
             return True
 
@@ -91,6 +98,7 @@ class Meta:
         return False
 
     def __gt__(self, other: Meta) -> bool:
+        # pylint: disable=no-else-return,too-many-return-statements
         # >
         if self.get_raw_meta() and not other.get_raw_meta():
             return True
@@ -164,9 +172,11 @@ class Meta:
         return self._raw_meta.get('subprotocol')
 
     def get_raw_meta(self) -> Dict:
+        """ Get the copy of raw meta dict """
         return deepcopy(self._raw_meta)
 
     def get_json(self) -> str:
+        """ Get raw meta and convert it to JSON """
         return json.dumps(self._raw_meta)
 
 
@@ -199,13 +209,13 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
         ]
     }
 
-    logger.debug(f'logux_add action {action} with meta {raw_meta or {}} to Logux')
+    logger.debug('logux_add action %s with meta %s to Logux', action, raw_meta or {})
 
     r = requests.post(url=settings.LOGUX_URL, json=command)
-    logger.debug(f'Logux answer is {r.status_code}: {r.text}')
+    logger.debug('Logux answer is %s: %s', r.status_code, r.text)
 
     if r.status_code != 200:
-        logger.error(f'`logux_add` to Logux is failed! err: {r.status_code}: {r.text}')
+        logger.error('`logux_add` to Logux is failed! err: %s: %s', r.status_code, r.text)
         raise LoguxProxyException(f'Non 200 response from Logux Proxy (logux_add): {r.status_code}: {r.text}')
 
 
@@ -256,7 +266,7 @@ class AuthCommand(Command):
         :returns:  `authenticated` or `denied` action dependently if user is authenticated.
         """
         is_authenticated: bool = self.logux_auth(self.user_id, self.token)
-        logger.warning(f'user: {self.user_id} is not authenticated')
+        logger.warning('user: %s is not authenticated', self.user_id)
         auth_id: str = self.auth_id
         return [LoguxValue(['authenticated' if is_authenticated else 'denied', auth_id])]
 
@@ -284,12 +294,12 @@ class ActionCommand(Command):
 
     @property
     def action(self):
-        # do not change internal action state from outside
+        """ Get copy of Action. Do not change internal action state from outside. """
         return deepcopy(self._action)
 
     @property
     def meta(self):
-        # do not change internal meta state from outside
+        """ Get copy of Meta. Do not change internal meta state from outside. """
         return deepcopy(self._meta)
 
     def send_back(self, action: Action, raw_meta: Optional[Dict] = None) -> None:
@@ -336,7 +346,7 @@ class ActionCommand(Command):
         logux_add(undo_action, undo_meta)
 
     # Required and optional action methods (these methods should be implemented by consumer)
-    def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # type: ignore
+    def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
         """ Callback which will be run on the end of action/subscription processing or on an error """
         return LoguxValue([])
 
@@ -353,7 +363,7 @@ class ActionCommand(Command):
         """
         raise NotImplementedError()
 
-    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
+    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:  # pylint: disable=unused-argument,no-self-use
         """ `resend` should return recipients for this action.
         It should look like:
         {'channels': ['users/38']}
@@ -392,7 +402,7 @@ class ActionCommand(Command):
         # access
         try:
             access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
-        except Exception as access_err:
+        except Exception as access_err:  # pylint: disable=broad-except
             access_result = ['error', self._meta.id, f'{access_err}']
 
         applying_result.append(access_result)
@@ -402,7 +412,7 @@ class ActionCommand(Command):
             try:
                 self.process(self._action, self._meta)
                 process_result = ['processed', self._meta.id]
-            except Exception as process_err:
+            except Exception as process_err:  # pylint: disable=broad-except
                 process_result = ['error', self._meta.id, f'{process_err}']
 
             applying_result.append(process_result)
@@ -411,7 +421,7 @@ class ActionCommand(Command):
         try:
             self._finally(self._action, self._meta)
             finally_result = []
-        except Exception as finally_err:
+        except Exception as finally_err:  # pylint: disable=broad-except
             finally_result = ['error', self._meta.id, f'{finally_err}']
 
         applying_result.append(finally_result)
@@ -450,7 +460,8 @@ class ChannelCommand(ActionCommand):
 
     @classmethod
     def is_match(cls, channel: str) -> bool:
-        return True if re.match(cls.channel_pattern, channel) is not None else False  # type: ignore
+        """ Check if the Dispatcher contains channel handler """
+        return re.match(cls.channel_pattern, channel) is not None  # type: ignore
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
@@ -473,7 +484,7 @@ class ChannelCommand(ActionCommand):
         # access
         try:
             access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
-        except Exception as access_err:
+        except Exception as access_err:  # pylint: disable=broad-except
             access_result = ['error', self._meta.id, f'{access_err}']
 
         # load
@@ -481,7 +492,7 @@ class ChannelCommand(ActionCommand):
             try:
                 self.load(self._action, self._meta)
                 load_result = ['processed', self._meta.id]
-            except Exception as load_err:
+            except Exception as load_err:  # pylint: disable=broad-except
                 load_result = ['error', self._meta.id, f'{load_err}']
 
             applying_result.append(LoguxValue(load_result))
