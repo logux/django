@@ -1,5 +1,8 @@
 # Logux Django
 
+<img align="right" width="95" height="148" title="Logux logotype"
+     src="https://logux.io/branding/logotype.svg">
+
 Django [Logux](https://logux.io/) integration engine.
 
 * **[Guide and recipes](https://logux.io/)**
