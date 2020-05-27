@@ -1,9 +1,14 @@
 # Logux Django
-Django Logux integration engine https://logux.io/
+
+Django [Logux](https://logux.io/) integration engine.
+
+* **[Guide and recipes](https://logux.io/)**
+* **[Chat](https://gitter.im/logux/logux)** for any questions
+* **[Issues and plans](https://github.com/logux/logux/issues)**
+* **[Projects](https://logux.io/architecture/parts/)** inside the Logux family
 
 ![Logux Proto](https://img.shields.io/badge/logux%20protocol-3-brightgreen)
 [![PyPI version](https://badge.fury.io/py/logux-django.svg)](https://badge.fury.io/py/logux-django)
-
 ![Travis CI](https://travis-ci.org/logux/django.svg?branch=master)
 ![Lint and Test](https://github.com/logux/django/workflows/Lint%20and%20Test/badge.svg)
 
