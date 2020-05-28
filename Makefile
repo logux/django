@@ -39,7 +39,7 @@ changelog:  ## Generate changelog
 	conventional-changelog -p angular -i CHANGELOG.md -s
 
 docs:  ## Run auto-docs build
-	source env/bin/activate && cd docs && make clean && make html
+	. env/bin/activate && cd docs && make clean && make html
 
 ## Release
 
