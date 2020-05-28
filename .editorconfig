@@ -5,7 +5,7 @@ charset = utf-8
 end_of_line = lf
 indent_size = 4
 indent_style = space
-insert_final_newline = false
+insert_final_newline = true
 max_line_length = 120
 tab_width = 4
 ij_continuation_indent_size = 8
@@ -14,6 +14,9 @@ ij_formatter_on_tag = @formatter:on
 ij_formatter_tags_enabled = false
 ij_smart_tabs = false
 ij_wrap_on_typing = false
+
+[Makefile]
+indent_style = tab
 
 [.editorconfig]
 ij_editorconfig_align_group_field_declarations = false
@@ -32,7 +35,7 @@ ij_shell_minify_program = false
 ij_shell_redirect_followed_by_space = false
 ij_shell_switch_cases_indented = false
 
-[{*.har, *.jsb2, *.jsb3, *.json, .babelrc, .eslintrc, .prettierrc, .stylelintrc, bowerrc, jest.config}]
+[{*.har, *.jsb2, *.jsb3, *.json, *.yml}]
 indent_size = 2
 ij_json_keep_blank_lines_in_code = 0
 ij_json_keep_indents_on_empty_lines = false
