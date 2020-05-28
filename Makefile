@@ -1,6 +1,8 @@
 .DEFAULT_GOAL := help
 .PHONY: venv install deps run test ci_test build release clean release_test release_production lint docs
 
+## Init
+
 venv:  ## Init VENV
 	python3 -m venv env
 
@@ -10,6 +12,7 @@ install:  ## Install this pkg by setup.py (venv)
 deps:  ## Install dev dependencies (global)
 	pip install black coverage flake8 mccabe mypy pylint
 
+## Code quality
 
 lint:  ## Lint and static-check code
 	flake8 logux
@@ -22,6 +25,7 @@ test:  ## Run tests (venv)
 ci_test:  ## Run tests inside CI ENV
 	export PYTHONPATH=$PYTHONPATH:$(pwd) && python tests/manage.py test test_app
 
+## Run
 
 run:  ## Run local dev server (venv)
 	./env/bin/python tests/manage.py runserver
@@ -34,19 +38,21 @@ build: clean test lint  ## Build package
 changelog:  ## Generate changelog
 	conventional-changelog -p angular -i CHANGELOG.md -s
 
+docs:  ## Run auto-docs build
+	source env/bin/activate && cd docs && make clean && make html
+
+## Release
+
 release_test: build  ## Release package on test PyPI server
 	python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 release_production: build  ## Release package on PyPI server
 	python3 -m twine upload dist/*
 
-docs:  ## Run auto-docs build
-	cd docs && make clean && make html
-
-
 clean:  ## Remove cache
 	rm -rf ./dist ./build ./logux_django.egg-info
 
+## Help
 
 help: ## Show help message
 	@IFS=$$'\n' ; \
