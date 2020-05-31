@@ -12,4 +12,3 @@ install:
 script:
   - make lint
   - make ci_test
-  - make docs
