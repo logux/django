@@ -465,7 +465,7 @@ class ChannelCommand(ActionCommand):
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta) -> None:
+    def load(self, action: Action, meta: Meta) -> Action:
         """ `load` should contain consumer code for applying subscription.
         Generally this method is almost the same as `process`. If it raised exception,
         self.apply will return error action automatically. If `load` return error action
@@ -475,6 +475,8 @@ class ChannelCommand(ActionCommand):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+
+        :returns: Logux action which will be sent back by `self.send_back()`
         """
         pass
 
@@ -490,7 +492,8 @@ class ChannelCommand(ActionCommand):
         # load
         if access_result[0] == 'approved':
             try:
-                self.load(self._action, self._meta)
+                action: Action = self.load(self._action, self._meta)
+                self.send_back(action)
                 load_result = ['processed', self._meta.id]
             except Exception as load_err:  # pylint: disable=broad-except
                 load_result = ['error', self._meta.id, f'{load_err}']

@@ -127,11 +127,9 @@ class UserChannel(ChannelCommand):
     def access(self, action: Action, meta: Meta) -> bool:
         return self.params['user_id'] == meta.user_id
 
-    def load(self, action: Action, meta: Meta):
+    def load(self, action: Action, meta: Meta) -> Action:
         user = User.objects.get(pk=self.params['user_id'])
-        self.send_back(
-            {'type': 'user/name', 'user': 38, 'name': user.first_name}
-        )
+        return {'type': 'user/name', 'user': 38, 'name': user.first_name}
 
 
 logux.channels.register(UserChannel)
