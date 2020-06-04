@@ -254,10 +254,17 @@ class AuthCommand(Command):
           }
         }
     """
+
+    class ANSWER:
+        """ Possible value of AUTH command answers """
+        AUTHENTICATED = 'authenticated'
+        ERROR = 'error'
+        DENIED = 'denied'
+
     auth_id: str
     user_id: str
     # TODO: https://github.com/logux/logux/issues/33#issuecomment-638589554
-    token: Optional[str]
+    _token: Optional[str]
     cookie: Dict
     headers: Dict
 
@@ -285,11 +292,14 @@ class AuthCommand(Command):
             logger.warning('AUTH command does not contain "authId" or "userId" keys')
             raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command')
 
-        self.token = cmd_body.get('token')
         self.cookie = cmd_body.get('cookie', {})
         self.headers = cmd_body.get('headers', {})
 
+        self._token = cmd_body.get('token')
         self.logux_auth = logux_auth
+
+    def _get_auth_token(self) -> str:
+        return self._token or self.cookie['token']
 
     def apply(self) -> LoguxValue:
         """ Applying auth command
@@ -298,13 +308,22 @@ class AuthCommand(Command):
         """
         # TODO: why `token` is Optional? Let's ask ai.
         #  https://github.com/logux/logux/issues/33#issuecomment-638589554
-        is_authenticated: bool = self.logux_auth(self.user_id, self.token)
-        logger.warning('user: %s is not authenticated', self.user_id)
-        auth_id: str = self.auth_id
+        try:
+            is_authenticated: bool = self.logux_auth(self.user_id, self._get_auth_token())
+        except KeyError as err:
+            logger.warning('AUTH command does not contain "token"')
+            return [
+                {
+                    "answer": self.ANSWER.ERROR,
+                    "authId": self.auth_id,
+                    "stack": "missing auth token: %s" % err
+                }
+            ]
+
         return [
             {
-                'answer': 'authenticated' if is_authenticated else 'denied',
-                'authId': auth_id
+                'answer': self.ANSWER.AUTHENTICATED if is_authenticated else self.ANSWER.DENIED,
+                'authId': self.auth_id
             }
         ]
 

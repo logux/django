@@ -59,7 +59,7 @@ Content-Type: application/json
 # "Auth" command: https://logux.io/protocols/backend/spec/#requests
 #
 
-# "auth" command -> authenticated (tests/test_project/settings.py:122)
+# "auth" command -> authenticated (tests/test_project/settings.py:122) for token as cmd kay
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
@@ -72,6 +72,45 @@ Content-Type: application/json
             "authId": "gf4Ygi6grYZYDH5Z2BsoR",
             "userId": "38",
             "token": "good-token"
+        }
+    ]
+}
+
+###
+
+# "auth" command -> authenticated (tests/test_project/settings.py:122) for token in cookies
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        {
+            "command": "auth",
+            "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+            "userId": "38",
+            "cookie": {
+                "token": "good-token"
+            }
+        }
+    ]
+}
+
+###
+
+# "auth" command -> error (tests/test_project/settings.py:122) missing token
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        {
+            "command": "auth",
+            "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+            "userId": "38"
         }
     ]
 }
