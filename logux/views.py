@@ -45,10 +45,9 @@ class LoguxRequest:
         self._body = json.loads(request.body.decode('utf-8'))
 
         self.version: int = int(self._body['version'])
-        # TODO: should I crush App here?
+
         if not protocol_version_is_supported(self.version):
-            # TODO: extract to custom logux exception
-            raise LoguxProxyException(f'Unsupported protocol version: {self.version}')
+            raise LoguxProxyException('Unsupported protocol version: %s' % self.version)
 
         self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
@@ -57,7 +56,7 @@ class LoguxRequest:
         commands: List[Command] = []
 
         for cmd in self._body['commands']:
-            cmd_type = cmd[0]
+            cmd_type = cmd['command']
 
             if cmd_type == self.CommandType.AUTH:
                 logger.debug('got auth cmd: %s', cmd)
