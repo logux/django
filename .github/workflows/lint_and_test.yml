@@ -37,6 +37,3 @@ jobs:
         -   name: Test
             run: |
                 make ci_test
-        -   name: Docs
-            run: |
-                make docs
