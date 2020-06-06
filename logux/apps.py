@@ -10,6 +10,7 @@ class LoguxConfig(AppConfig):
     verbose_name = 'Logux'
 
     def ready(self):
-        # import all logux_actions.py and logux_subscriptions.py from consumer modules
+        # check if all required settings is defined
         settings.get_config()
+        # import all logux_actions.py and logux_subscriptions.py from consumer modules
         autodiscover()
