@@ -316,7 +316,7 @@ class AuthCommand(Command):
                 {
                     "answer": self.ANSWER.ERROR,
                     "authId": self.auth_id,
-                    "stack": "missing auth token: %s" % err
+                    "details": "missing auth token: %s" % err
                 }
             ]
 

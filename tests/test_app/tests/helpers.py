@@ -5,6 +5,8 @@ from django.http import JsonResponse
 from django.test import TestCase
 from django.urls import reverse
 
+PROTO_VER = 4
+
 
 class LoguxTestCase(TestCase):
     """ TestCase helper. Easy way to make Logux protocol requests """
