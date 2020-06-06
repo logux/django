@@ -5,6 +5,7 @@ from logux.utils import autodiscover
 
 
 class LoguxConfig(AppConfig):
+    """ Logux app conf """
     name = 'logux'
     verbose_name = 'Logux'
 
