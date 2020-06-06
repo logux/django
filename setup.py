@@ -7,7 +7,7 @@ setup(
     version=VERSION,
     packages=find_packages(exclude=['tests*']),
     install_requires=[
-        "django>=2.2.11,<3",
+        "django>=2.2.13,<3",
         "requests>=2.22.0"
     ],
     python_requires=">=3.7",
