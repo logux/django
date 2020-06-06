@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.7, 3.8]
-        django-version: [2.2.11, 2.2.12]
+        django-version: [2.2.11, 2.2.13]
       fail-fast: false
 
     steps:
