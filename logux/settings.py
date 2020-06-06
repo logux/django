@@ -2,21 +2,12 @@ import logging
 
 from django.conf import settings
 
-from logux.utils import autodiscover
-
-# logux server URL
-DEFAULT_LOGUX_URL = 'http://localhost:31337'
-LOGUX_URL = getattr(settings, 'LOGUX_URL', DEFAULT_LOGUX_URL)
-
-LOGUX_CONTROL_SECRET = getattr(settings, 'LOGUX_CONTROL_SECRET', None)
-
-if LOGUX_CONTROL_SECRET is None:
-    raise ValueError("can't get LOGUX_CONTROL_PASSWORD")
-
-LOGUX_AUTH_FUNC = getattr(settings, 'LOGUX_AUTH_FUNC', None)
-
-if LOGUX_AUTH_FUNC is None:
-    raise ValueError('LOGUX_AUTH_FUNC is required! Set auth function in your settings.py')
+CONFIG_DEFAULTS = {
+    'URL': 'http://localhost:31337',
+    'CONTROL_SECRET': None,
+    'AUTH_FUNC': None,
+    'COOKIE_AUTH_KEY': 'token'
+}
 
 DEBUG = getattr(settings, 'DEBUG', True)
 
@@ -24,5 +15,19 @@ if DEBUG:
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# import all logux_actions.py and logux_subscriptions.py from consumer modules
-autodiscover()
+
+# TODO: find a way how to cache it for prod and do not cache it for tests
+# @lru_cache()
+def get_config():
+    """ Get default configs and marge it with a user's config """
+    USER_CONFIG = getattr(settings, "LOGUX_CONFIG", {})
+    CONFIG = CONFIG_DEFAULTS.copy()
+    CONFIG.update(USER_CONFIG)
+
+    if CONFIG['CONTROL_SECRET'] is None:
+        raise ValueError("can't get CONTROL_SECRET")
+
+    if CONFIG['AUTH_FUNC'] is None:
+        raise ValueError('AUTH_FUNC is required! Set auth function in your settings.py')
+
+    return CONFIG

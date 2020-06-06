@@ -12,9 +12,9 @@ from datetime import datetime
 from typing import List, Callable, Optional, Dict, Sequence, Any
 
 import requests
-from django.conf import settings
 
 from logux import LOGUX_PROTOCOL_VERSION
+from logux import settings
 from logux.exceptions import LoguxProxyException, LoguxBadAuthException
 
 # Logux requests \ response data format
@@ -199,7 +199,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
     """
     command = {
         "version": LOGUX_PROTOCOL_VERSION,
-        "secret": settings.LOGUX_CONTROL_SECRET,
+        "secret": settings.get_config()['CONTROL_SECRET'],
         "commands": [
             [
                 "action",
@@ -211,7 +211,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
 
     logger.debug('logux_add action %s with meta %s to Logux', action, raw_meta or {})
 
-    r = requests.post(url=settings.LOGUX_URL, json=command)
+    r = requests.post(url=settings.get_config()['LOGUX_URL'], json=command)
     logger.debug('Logux answer is %s: %s', r.status_code, r.text)
 
     if r.status_code != 200:
@@ -281,7 +281,7 @@ class AuthCommand(Command):
         :type cmd_body: Dict[str, Any]
         :param logux_auth: function to prove user is authenticated,
           type hint: `logux_auth(user_id: str, token: str) -> bool`. `logux_auth` function will be taken from
-          settings.LOGUX_AUTH_FUNC (should be provided by consumer)
+          settings.get_config()['AUTH_FUNC'] (should be provided by consumer)
         :type logux_auth: Callable[[str, str], bool]
         """
         try:
@@ -299,7 +299,7 @@ class AuthCommand(Command):
         self.logux_auth = logux_auth
 
     def _get_auth_token(self) -> str:
-        return self._token or self.cookie['token']
+        return self._token or self.cookie[settings.get_config()['COOKIE_AUTH_KEY']]
 
     def apply(self) -> LoguxValue:
         """ Applying auth command

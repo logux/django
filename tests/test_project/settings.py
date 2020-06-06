@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'logux',
+
     'tests.test_app',
 ]
 
@@ -117,8 +119,8 @@ STATIC_URL = '/static/'
 
 # Logux settings: https://logux.io/guide/starting/proxy-server/
 # TODO: add to Doc: do not use passwords in the settings, use ENV instead
-LOGUX_CONTROL_SECRET = "secret"
-
-LOGUX_URL = "http://localhost:31337"
-
-LOGUX_AUTH_FUNC = (lambda user_id, token: token == 'good-token') if DEBUG else None
+LOGUX_CONFIG = {
+    'URL': 'http://localhost:31337',
+    'CONTROL_SECRET': 'secret',
+    'AUTH_FUNC': (lambda user_id, token: token == 'good-token') if DEBUG else None
+}

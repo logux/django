@@ -11,7 +11,6 @@ from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SU
     protocol_version_is_supported
 from logux.dispatchers import logux
 from logux.exceptions import LoguxProxyException
-from logux.settings import LOGUX_CONTROL_SECRET
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +59,7 @@ class LoguxRequest:
 
             if cmd_type == self.CommandType.AUTH:
                 logger.debug('got auth cmd: %s', cmd)
-                commands.append(AuthCommand(cmd, settings.LOGUX_AUTH_FUNC))
+                commands.append(AuthCommand(cmd, settings.get_config()['AUTH_FUNC']))
 
             elif cmd_type == self.CommandType.ACTION:
                 logger.debug('got action: %s', cmd)
@@ -91,7 +90,7 @@ class LoguxRequest:
 
     def _is_server_authenticated(self) -> bool:
         """ Check Logux proxy server secret """
-        return self._body['secret'] == LOGUX_CONTROL_SECRET
+        return self._body['secret'] == settings.get_config()['CONTROL_SECRET']
 
     def apply_commands(self) -> Iterable[LoguxValue]:
         """ Apply all actions commands one by one
