@@ -192,20 +192,19 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
     :param action: action dict
     :param raw_meta: meta dict (not Meta instance)
 
-    TODO: extract this exception into custom error class -> logux/exception.py
-    :raises: base Exception() if Logux Proxy returns non 200 response code
+    :raises: base LoguxProxyException() if Logux Proxy returns non 200 response code
 
     :return: None
     """
     command = {
-        "version": LOGUX_PROTOCOL_VERSION,
-        "secret": settings.get_config()['CONTROL_SECRET'],
-        "commands": [
-            [
-                "action",
-                action,
-                raw_meta or {}
-            ]
+        'version': LOGUX_PROTOCOL_VERSION,
+        'secret': settings.get_config()['CONTROL_SECRET'],
+        'commands': [
+            {
+                'command': 'action',
+                'action': action,
+                'meta': raw_meta or {}
+            }
         ]
     }
 
@@ -324,8 +323,7 @@ class AuthCommand(Command):
 
 
 class ActionCommand(Command):
-    """ Logux Action Command provide way to handle actions from Logux Proxy.
-    """
+    """ Logux Action Command provide way to handle actions from Logux Proxy. """
     # `action_type` is a required property, if the property does not define
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
