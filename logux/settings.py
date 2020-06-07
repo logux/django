@@ -5,8 +5,7 @@ from django.conf import settings
 CONFIG_DEFAULTS = {
     'URL': 'http://localhost:31337',
     'CONTROL_SECRET': None,
-    'AUTH_FUNC': None,
-    'COOKIE_AUTH_KEY': 'token'
+    'AUTH_FUNC': None
 }
 
 DEBUG = getattr(settings, 'DEBUG', True)

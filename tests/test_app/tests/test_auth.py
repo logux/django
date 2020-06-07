@@ -35,25 +35,6 @@ class LoguxAuthTestCase(LoguxTestCase):
         self.assertEqual(r[0]["answer"], AuthCommand.ANSWER.AUTHENTICATED)
         self.assertEqual(r[0]["authId"], 'gf4Ygi6grYZYDH5Z2BsoR')
 
-        # token in cookie
-        r = self.logux_request({
-            "version": PROTO_VER,
-            "secret": "secret",
-            "commands": [
-                {
-                    "command": "auth",
-                    "authId": "gf4Ygi6grYZYDH5Z2BsoR",
-                    "userId": "42",
-                    "cookie": {
-                        "token": self.good_token
-                    },
-                }
-            ]
-        })
-
-        self.assertEqual(r[0]["answer"], AuthCommand.ANSWER.AUTHENTICATED)
-        self.assertEqual(r[0]["authId"], 'gf4Ygi6grYZYDH5Z2BsoR')
-
     def test_denied_auth(self) -> None:
         """ Check denied auth.
 
@@ -78,44 +59,11 @@ class LoguxAuthTestCase(LoguxTestCase):
         self.assertEqual(r[0]["answer"], AuthCommand.ANSWER.DENIED)
         self.assertEqual(r[0]["authId"], 'gf4Ygi6grYZYDH5Z2BsoR')
 
-        # bad token in cookie
-        r = self.logux_request({
-            "version": PROTO_VER,
-            "secret": "secret",
-            "commands": [
-                {
-                    "command": "auth",
-                    "authId": "gf4Ygi6grYZYDH5Z2BsoR",
-                    "userId": "42",
-                    "cookie": {
-                        "token": "blablabla"
-                    }
-                }
-            ]
-        })
 
-        self.assertEqual(r[0]["answer"], AuthCommand.ANSWER.DENIED)
-        self.assertEqual(r[0]["authId"], 'gf4Ygi6grYZYDH5Z2BsoR')
-
-        # missing token
-        r = self.logux_request({
-            "version": PROTO_VER,
-            "secret": "secret",
-            "commands": [
-                {
-                    "command": "auth",
-                    "authId": "gf4Ygi6grYZYDH5Z2BsoR",
-                    "userId": "42"
-                }
-            ]
-        })
-
-        self.assertEqual(r[0]["answer"], AuthCommand.ANSWER.ERROR)
-        self.assertEqual(r[0]["authId"], 'gf4Ygi6grYZYDH5Z2BsoR')
-        self.assertEqual(r[0]["details"], "missing auth token: 'token'")
-
-
-@override_settings(LOGUX_CONFIG={**settings.LOGUX_CONFIG, 'COOKIE_AUTH_KEY': 'AuthPassword'})
+@override_settings(LOGUX_CONFIG={
+    **settings.LOGUX_CONFIG,
+    'AUTH_FUNC': lambda user_id, token, cookie, headers: cookie['AuthPassword'] == 'good-token'
+})
 class LoguxAuthWithCookieTestCase(LoguxTestCase):
     """ Auth command with token in the cookies """
     good_token = 'good-token'

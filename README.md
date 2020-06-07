@@ -37,8 +37,9 @@ Sets Logux settings in your `settings.py`:
 LOGUX_CONFIG = {
     'URL': 'http://localhost:31337',
     'CONTROL_SECRET': 'secret',
-    'LOGUX_COOKIE_AUTH_KEY': 'AuthPassword', #  lookup key for auth through cookie (default key name is "token")
-    'AUTH_FUNC': your_auth_function #  your_auth_function(user_id, token: str) -> bool
+
+    #  your_auth_function(user_id: str, token: str, cookie: Dict, headers: Dict) -> bool
+    'AUTH_FUNC': your_auth_function 
 }
 ```
 

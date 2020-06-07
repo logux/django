@@ -122,5 +122,5 @@ STATIC_URL = '/static/'
 LOGUX_CONFIG = {
     'URL': 'http://localhost:31337',
     'CONTROL_SECRET': 'secret',
-    'AUTH_FUNC': (lambda user_id, token: token == 'good-token') if DEBUG else None
+    'AUTH_FUNC': (lambda user_id, token, cookie, headers: token == 'good-token') if DEBUG else None
 }

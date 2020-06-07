@@ -263,12 +263,13 @@ class AuthCommand(Command):
 
     auth_id: str
     user_id: str
-    # TODO: https://github.com/logux/logux/issues/33#issuecomment-638589554
-    _token: Optional[str]
+    token: Optional[str]
     cookie: Dict
     headers: Dict
 
-    def __init__(self, cmd_body: Dict[str, Any], logux_auth: Callable[[str, str], bool]):
+    def __init__(self,
+                 cmd_body: Dict[str, Any],
+                 logux_auth: Callable[[str, Optional[str], Dict, Dict], bool]):
         """ Construct Auth cmd from raw logux command.
 
         :param cmd_body: raw logux command, like
@@ -280,38 +281,32 @@ class AuthCommand(Command):
             }
         :type cmd_body: Dict[str, Any]
         :param logux_auth: function to prove user is authenticated,
-          type hint: `logux_auth(user_id: str, token: str) -> bool`. `logux_auth` function will be taken from
-          settings.get_config()['AUTH_FUNC'] (should be provided by consumer)
-        :type logux_auth: Callable[[str, str], bool]
+          type hint: `logux_auth(user_id: str, token: str, cookie: Dict, headers: Dict) -> bool`.
+          `logux_auth` function will be taken from settings.get_config()['AUTH_FUNC'] (should be provided by consumer)
+        :type logux_auth: Callable[[str, Optional[str], Dict, Dict], bool])
         """
         try:
             self.auth_id = cmd_body['authId']
             self.user_id = cmd_body['userId']
         except KeyError:
-            # TODO: https://github.com/logux/logux/issues/33#issuecomment-638589554
             logger.warning('AUTH command does not contain "authId" or "userId" keys')
             raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command')
 
         self.cookie = cmd_body.get('cookie', {})
         self.headers = cmd_body.get('headers', {})
+        self.token = cmd_body.get('token', None)
 
-        self._token = cmd_body.get('token')
         self.logux_auth = logux_auth
-
-    def _get_auth_token(self) -> str:
-        return self._token or self.cookie[settings.get_config()['COOKIE_AUTH_KEY']]
 
     def apply(self) -> LoguxValue:
         """ Applying auth command
 
         :returns:  `authenticated` or `denied` action dependently if user is authenticated.
         """
-        # TODO: why `token` is Optional? Let's ask ai.
-        #  https://github.com/logux/logux/issues/33#issuecomment-638589554
         try:
-            is_authenticated: bool = self.logux_auth(self.user_id, self._get_auth_token())
+            is_authenticated: bool = self.logux_auth(self.user_id, self.token, self.cookie, self.headers)
         except KeyError as err:
-            logger.warning('AUTH command does not contain "token"')
+            logger.warning("can't apply AUTH func because of missing key: %s", err)
             return [
                 {
                     "answer": self.ANSWER.ERROR,
