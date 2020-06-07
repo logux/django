@@ -13,9 +13,9 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": []
+    "version": 4,
+    "secret": "secret",
+    "commands": []
 }
 
 ###
@@ -25,9 +25,9 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "wrong secret",
-  "commands": []
+    "version": 4,
+    "secret": "wrong secret",
+    "commands": []
 }
 
 ###
@@ -41,16 +41,16 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "sup guys!",
-      "foo",
-      "bar",
-      "gf4Ygi6grYZYDH5Z2BsoR"
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        [
+            "sup guys!",
+            "foo",
+            "bar",
+            "gf4Ygi6grYZYDH5Z2BsoR"
+        ]
     ]
-  ]
 }
 
 ###
@@ -59,21 +59,60 @@ Content-Type: application/json
 # "Auth" command: https://logux.io/protocols/backend/spec/#requests
 #
 
-# "auth" command -> authenticated (tests/test_project/settings.py:122)
+# "auth" command -> authenticated (tests/test_project/settings.py:122) for token as cmd kay
 POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "auth",
-      "38",
-      "good-token",
-      "gf4Ygi6grYZYDH5Z2BsoR"
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        {
+            "command": "auth",
+            "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+            "userId": "38",
+            "token": "good-token"
+        }
     ]
-  ]
+}
+
+###
+
+# "auth" command -> authenticated (tests/test_project/settings.py:122) for token in cookies
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        {
+            "command": "auth",
+            "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+            "userId": "38",
+            "cookie": {
+                "token": "good-token"
+            }
+        }
+    ]
+}
+
+###
+
+# "auth" command -> error (tests/test_project/settings.py:122) missing token
+POST http://localhost:8000/logux/
+Content-Type: application/json
+
+{
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        {
+            "command": "auth",
+            "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+            "userId": "38"
+        }
+    ]
 }
 
 ###
@@ -83,16 +122,16 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "auth",
-      "38",
-      "bad-token",
-      "gf4Ygi6grYZYDH5Z2BsoR"
+    "version": 4,
+    "secret": "secret",
+    "commands": [
+        {
+            "command": "auth",
+            "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+            "userId": "38",
+            "token": "bad-token"
+        }
     ]
-  ]
 }
 
 ###
@@ -106,34 +145,34 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "action",
-      {
-        "type": "user/rename",
-        "user": 38,
-        "name": "Ivan"
-      },
-      {
-        "id": "1560954012838 38:Y7bysd:O0ETfc 0",
-        "time": 1560954012838
-      }
-    ],
-    [
-      "action",
-      {
-        "type": "user/rename",
-        "user": 21,
-        "name": "Egor"
-      },
-      {
-        "id": "1560954012900 38:Y7bysd:O0ETfc 1",
-        "time": 1560954012900
-      }
+    "version": 3,
+    "secret": "secret",
+    "commands": [
+        [
+            "action",
+            {
+                "type": "user/rename",
+                "user": 38,
+                "name": "Ivan"
+            },
+            {
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                "time": 1560954012838
+            }
+        ],
+        [
+            "action",
+            {
+                "type": "user/rename",
+                "user": 21,
+                "name": "Egor"
+            },
+            {
+                "id": "1560954012900 38:Y7bysd:O0ETfc 1",
+                "time": 1560954012900
+            }
+        ]
     ]
-  ]
 }
 
 ###
@@ -143,22 +182,22 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "action",
-      {
-        "type": "user/unknown",
-        "user": 38,
-        "name": "New"
-      },
-      {
-        "id": "1560954012838 38:Y7bysd:O0ETfc 0",
-        "time": 1560954012838
-      }
+    "version": 3,
+    "secret": "secret",
+    "commands": [
+        [
+            "action",
+            {
+                "type": "user/unknown",
+                "user": 38,
+                "name": "New"
+            },
+            {
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                "time": 1560954012838
+            }
+        ]
     ]
-  ]
 }
 
 ###
@@ -170,21 +209,21 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "action",
-      {
-        "type": "logux/subscribe",
-        "channel": "user/38"
-      },
-      {
-        "id": "1560954012858 38:Y7bysd:O0ETfc 0",
-        "time": 1560954012858
-      }
+    "version": 3,
+    "secret": "secret",
+    "commands": [
+        [
+            "action",
+            {
+                "type": "logux/subscribe",
+                "channel": "user/38"
+            },
+            {
+                "id": "1560954012858 38:Y7bysd:O0ETfc 0",
+                "time": 1560954012858
+            }
+        ]
     ]
-  ]
 }
 
 ###
@@ -194,21 +233,21 @@ POST http://localhost:8000/logux/
 Content-Type: application/json
 
 {
-  "version": 3,
-  "secret": "secret",
-  "commands": [
-    [
-      "action",
-      {
-        "type": "logux/subscribe",
-        "channel": "user/39"
-      },
-      {
-        "id": "1560954012858 39:Y7bysd:O0ETfc 0",
-        "time": 1560954012858
-      }
+    "version": 3,
+    "secret": "secret",
+    "commands": [
+        [
+            "action",
+            {
+                "type": "logux/subscribe",
+                "channel": "user/39"
+            },
+            {
+                "id": "1560954012858 39:Y7bysd:O0ETfc 0",
+                "time": 1560954012858
+            }
+        ]
     ]
-  ]
 }
 
 ###

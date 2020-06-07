@@ -9,16 +9,16 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict, NewType, Union, Sequence, Any
+from typing import List, Callable, Optional, Dict, Sequence, Any
 
 import requests
-from django.conf import settings
 
 from logux import LOGUX_PROTOCOL_VERSION
-from logux.exceptions import LoguxProxyException
+from logux import settings
+from logux.exceptions import LoguxProxyException, LoguxBadAuthException
 
 # Logux requests \ response data format
-LoguxValue = NewType("LoguxValue", Sequence[Union[Dict, str]])
+LoguxValue = Sequence[Dict[str, Any]]
 
 Action = Dict[str, Any]
 logger = logging.getLogger(__name__)
@@ -199,7 +199,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
     """
     command = {
         "version": LOGUX_PROTOCOL_VERSION,
-        "secret": settings.LOGUX_CONTROL_SECRET,
+        "secret": settings.get_config()['CONTROL_SECRET'],
         "commands": [
             [
                 "action",
@@ -211,7 +211,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
 
     logger.debug('logux_add action %s with meta %s to Logux', action, raw_meta or {})
 
-    r = requests.post(url=settings.LOGUX_URL, json=command)
+    r = requests.post(url=settings.get_config()['LOGUX_URL'], json=command)
     logger.debug('Logux answer is %s: %s', r.status_code, r.text)
 
     if r.status_code != 200:
@@ -223,14 +223,13 @@ class Command(ABC):
     """ Logux Command abstract class.
     All type of Logux Commands should be inheritance from this one.
 
-    Required ony one method `apply()` witch executing command and return LoguxValue
+    Required only one method `apply()` witch executing command and return LoguxValue
       with an answer or error a message.
     """
 
     @abstractmethod
-    def apply(self) -> List[LoguxValue]:
-        """
-         This method consistently apply all Action methods inside of try/catch and construct List of
+    def apply(self) -> LoguxValue:
+        """ This method consistently apply all Action methods inside of try/catch and construct List of
         LoguxValue's with action methods results or error messages.
 
         :return: list of results of applying all actions methods
@@ -241,40 +240,93 @@ class Command(ABC):
 class AuthCommand(Command):
     """ Logux Auth Command provide way to check is the User authenticated.
 
-    TODO: this class should be ActionCommand probably
+    Auth command should look like Object:
+        {
+          command: "auth",
+          authId: string,
+          userId: string,
+          token?: string,
+          cookie: {
+            [name]: string
+          },
+          headers: {
+            [name]: string
+          }
+        }
     """
-    user_id: str
-    token: str
-    auth_id: str
 
-    def __init__(self, cmd_body: Dict[str, str], logux_auth: Callable[[str, str], bool]):
+    class ANSWER:
+        """ Possible value of AUTH command answers """
+        AUTHENTICATED = 'authenticated'
+        ERROR = 'error'
+        DENIED = 'denied'
+
+    auth_id: str
+    user_id: str
+    token: Optional[str]
+    cookie: Dict
+    headers: Dict
+
+    def __init__(self,
+                 cmd_body: Dict[str, Any],
+                 logux_auth: Callable[[str, Optional[str], Dict, Dict], bool]):
         """ Construct Auth cmd from raw logux command.
 
-        :param cmd_body: raw logux command, like ["auth", "38", "good-token", "gf4Ygi6grYZYDH5Z2BsoR"]
-        :type cmd_body: List[str]
+        :param cmd_body: raw logux command, like
+            {
+              "command": "auth",
+              "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+              "userId": "38",
+              "token": "parole"
+            }
+        :type cmd_body: Dict[str, Any]
         :param logux_auth: function to prove user is authenticated,
-          type hint: `logux_auth(user_id: str, token: str) -> bool`. `logux_auth` function will be injected from
-          settings.LOGUX_AUTH_FUNC (should be provided by consumer)
-        :type logux_auth: Callable[[str, str], bool]
+          type hint: `logux_auth(user_id: str, token: str, cookie: Dict, headers: Dict) -> bool`.
+          `logux_auth` function will be taken from settings.get_config()['AUTH_FUNC'] (should be provided by consumer)
+        :type logux_auth: Callable[[str, Optional[str], Dict, Dict], bool])
         """
-        _, self.user_id, self.token, self.auth_id = cmd_body
+        try:
+            self.auth_id = cmd_body['authId']
+            self.user_id = cmd_body['userId']
+        except KeyError:
+            logger.warning('AUTH command does not contain "authId" or "userId" keys')
+            raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command')
+
+        self.cookie = cmd_body.get('cookie', {})
+        self.headers = cmd_body.get('headers', {})
+        self.token = cmd_body.get('token', None)
+
         self.logux_auth = logux_auth
 
-    def apply(self) -> List[LoguxValue]:
+    def apply(self) -> LoguxValue:
         """ Applying auth command
 
         :returns:  `authenticated` or `denied` action dependently if user is authenticated.
         """
-        is_authenticated: bool = self.logux_auth(self.user_id, self.token)
-        logger.warning('user: %s is not authenticated', self.user_id)
-        auth_id: str = self.auth_id
-        return [LoguxValue(['authenticated' if is_authenticated else 'denied', auth_id])]
+        try:
+            is_authenticated: bool = self.logux_auth(self.user_id, self.token, self.cookie, self.headers)
+        except KeyError as err:
+            logger.warning("can't apply AUTH func because of missing key: %s", err)
+            return [
+                {
+                    "answer": self.ANSWER.ERROR,
+                    "authId": self.auth_id,
+                    "details": "missing auth token: %s" % err
+                }
+            ]
+
+        return [
+            {
+                'answer': self.ANSWER.AUTHENTICATED if is_authenticated else self.ANSWER.DENIED,
+                'authId': self.auth_id
+            }
+        ]
 
 
 class ActionCommand(Command):
     """ Logux Action Command provide way to handle actions from Logux Proxy.
     """
-    # `action_type` is a required property, if the property does not defined
+    # `action_type` is a required property, if the property does not define
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
 
