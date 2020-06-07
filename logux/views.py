@@ -63,27 +63,27 @@ class LoguxRequest:
 
             elif cmd_type == self.CommandType.ACTION:
                 logger.debug('got action: %s', cmd)
-                action_type = cmd[1]['type']
+                action_type = cmd['action']['type']
 
                 # subscribe actions
                 if action_type == LOGUX_SUBSCRIBE:
-                    channel = cmd[1]["channel"]
+                    channel = cmd['action']["channel"]
                     logger.debug('got subscription for channel: %s', channel)
                     commands.append(logux.channels[channel](cmd))
                     continue
 
                 # custom actions
                 if not logux.actions.has_action(action_type):
-                    logger.error('unknown action: %s', action_type)
+                    logger.warning('unknown action: %s', action_type)
                     commands.append(UnknownAction(cmd))
                     continue
 
                 commands.append(logux.actions[action_type](cmd))
 
             else:
-                logger.error('wrong command type: %s', cmd)
+                logger.warning('wrong command type: %s', cmd)
                 err_msg = f'wrong command type: {cmd_type}, expected {self.CommandType.choices}'
-                logger.error(err_msg)
+                logger.warning(err_msg)
                 logger.warning('command with wrong type will be ignored')
 
         return commands

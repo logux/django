@@ -370,7 +370,7 @@ class ActionCommand(Command):
         self._action: Action = cmd_body['action']
         self._meta: Meta = Meta(cmd_body['meta'])
         # TODO: add headers to access, resend, process funcs signatures
-        self._headers = cmd_body['headers']
+        self._headers = cmd_body.get('headers', {})
 
     @property
     def action(self):
