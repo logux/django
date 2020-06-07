@@ -1,7 +1,7 @@
 import json
 import logging
 from itertools import chain
-from typing import List, Iterable
+from typing import List
 
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
@@ -92,7 +92,7 @@ class LoguxRequest:
         """ Check Logux proxy server secret """
         return self._body['secret'] == settings.get_config()['CONTROL_SECRET']
 
-    def apply_commands(self) -> Iterable[LoguxValue]:
+    def apply_commands(self) -> LoguxValue:
         """ Apply all actions commands one by one
 
         :return: List of command applying results
@@ -101,12 +101,22 @@ class LoguxRequest:
             # TODO: extract to common way to error response
             err_msg = 'Unauthorised Logux proxy server'
             logger.warning(err_msg)
-            return [LoguxValue(['error', {}, err_msg])]
+            return [
+                {
+                    'answer': Command.ANSWER.ERROR,
+                    'details': err_msg
+                }
+            ]
 
         if len(self.commands) == 0:
-            return [LoguxValue(['error', {}, 'command list is empty'])]
+            return [
+                {
+                    'answer': Command.ANSWER.ERROR,
+                    'details': 'command list is empty'
+                }
+            ]
 
-        return filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands]))
+        return list(filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands])))
 
 
 @csrf_exempt

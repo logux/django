@@ -233,6 +233,8 @@ class Command(ABC):
         RESEND = 'resend'
         APPROVED = 'approved'
         PROCESSED = 'processed'
+        UNKNOWN_ACTION = 'unknownAction'
+        UNKNOWN_CHANNEL = 'unknownChannel'
         ERROR = 'error'
 
     @abstractmethod
@@ -326,7 +328,18 @@ class AuthCommand(Command):
 
 
 class ActionCommand(Command):
-    """ Logux Action Command provide way to handle actions from Logux Proxy. """
+    """ Logux Action Command provide way to handle actions from Logux Proxy.
+
+    Action command should look like Object:
+        {
+          command: "action",
+          action: Action,
+          meta: Meta,
+          headers: {
+            [name]: string
+          }
+        }
+    """
     # `action_type` is a required property, if the property does not define
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
@@ -346,6 +359,9 @@ class ActionCommand(Command):
                   "id": "1560954012838 38:Y7bysd:O0ETfc 0",
                   "time": 1560954012838,
                   "subprotocol": "1.0.0"
+                },
+                headers: {
+                    "key": "value"
                 }
               }
 
@@ -353,6 +369,8 @@ class ActionCommand(Command):
         """
         self._action: Action = cmd_body['action']
         self._meta: Meta = Meta(cmd_body['meta'])
+        # TODO: add headers to access, resend, process funcs signatures
+        self._headers = cmd_body['headers']
 
     @property
     def action(self):
@@ -426,6 +444,20 @@ class ActionCommand(Command):
         """
         raise NotImplementedError()
 
+    def _try_access(self) -> Dict[str, Any]:
+        try:
+            access_result = {
+                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta) else self.ANSWER.DENIED,
+                'id': self._meta.id
+            }
+        except Exception as access_err:  # pylint: disable=broad-except
+            access_result = {
+                'answer': self.ANSWER.ERROR,
+                'id': self._meta.id,
+                'details': f'{access_err}'
+            }
+        return access_result
+
     def resend(self, action: Action, meta: Optional[Meta]) -> Dict:  # pylint: disable=unused-argument,no-self-use
         """ `resend` should return recipients for this action.
         It should look like:
@@ -493,18 +525,7 @@ class ActionCommand(Command):
         applying_result.append(resend_result)
 
         # access
-        try:
-            access_result = {
-                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta) else self.ANSWER.DENIED,
-                'id': self._meta.id
-            }
-        except Exception as access_err:  # pylint: disable=broad-except
-            access_result = {
-                'answer': self.ANSWER.ERROR,
-                'id': self._meta.id,
-                'details': f'{access_err}'
-            }
-
+        access_result = self._try_access()
         applying_result.append(access_result)
 
         # process
@@ -557,11 +578,12 @@ class ChannelCommand(ActionCommand):
     #   ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
     action_type = LOGUX_SUBSCRIBE
     # regexp, like in urls.py
+    # TODO: https://github.com/logux/django/issues/38
     channel_pattern: str
 
-    def __init__(self, cmd_body: List[Action]):
+    def __init__(self, cmd_body: Dict[str, Any]):
         super().__init__(cmd_body)
-        self.channel = cmd_body[1]['channel']
+        self.channel = self._action['channel']
         self.params = self._parse_params()
 
     def _parse_params(self) -> Dict:
@@ -589,25 +611,29 @@ class ChannelCommand(ActionCommand):
         """
         pass
 
-    def apply(self) -> List[LoguxValue]:
+    def apply(self) -> LoguxValue:
         applying_result = []
 
         # access
-        try:
-            access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
-        except Exception as access_err:  # pylint: disable=broad-except
-            access_result = ['error', self._meta.id, f'{access_err}']
+        access_result = self._try_access()
 
         # load
-        if access_result[0] == 'approved':
+        if access_result['answer'] == self.ANSWER.APPROVED:
             try:
                 action: Action = self.load(self._action, self._meta)
                 self.send_back(action)
-                load_result = ['processed', self._meta.id]
+                load_result = {
+                    'answer': self.ANSWER.PROCESSED,
+                    'id': self._meta.id
+                }
             except Exception as load_err:  # pylint: disable=broad-except
-                load_result = ['error', self._meta.id, f'{load_err}']
+                load_result = {
+                    'answer': self.ANSWER.ERROR,
+                    'id': self._meta.id,
+                    'details': f'{load_err}'
+                }
 
-            applying_result.append(LoguxValue(load_result))
+            applying_result.append(load_result)
 
         return applying_result
 
@@ -615,10 +641,35 @@ class ChannelCommand(ActionCommand):
 class UnknownAction(ActionCommand):
     """ Action for generation `unknownAction` error.
     Will be used and evaluated if actions dispatcher
-    got unexpected action type """
+    got unexpected action type. """
 
     def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return False
 
-    def apply(self) -> List[LoguxValue]:
-        return [LoguxValue(['unknownAction', self._meta.id])]
+    def apply(self) -> LoguxValue:
+        return [
+            {
+                'answer': self.ANSWER.UNKNOWN_ACTION,
+                'id': self._meta.id
+            }
+        ]
+
+
+class UnknownChannel(ChannelCommand):
+    """ Action for generation `unknownChannel` error.
+    Will be used and evaluated if actions dispatcher
+    got unexpected action type. """
+
+    def load(self, action: Action, meta: Meta) -> Action:
+        return {}
+
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
+        return False
+
+    def apply(self) -> LoguxValue:
+        return [
+            {
+                'answer': self.ANSWER.UNKNOWN_CHANNEL,
+                'id': self._meta.id
+            }
+        ]
