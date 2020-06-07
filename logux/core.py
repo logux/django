@@ -9,7 +9,7 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict, Sequence, Any
+from typing import List, Callable, Optional, Dict, Any
 
 import requests
 
@@ -18,7 +18,7 @@ from logux import settings
 from logux.exceptions import LoguxProxyException, LoguxBadAuthException
 
 # Logux requests \ response data format
-LoguxValue = Sequence[Dict[str, Any]]
+LoguxValue = List[Dict[str, Any]]
 
 Action = Dict[str, Any]
 logger = logging.getLogger(__name__)
@@ -226,6 +226,15 @@ class Command(ABC):
       with an answer or error a message.
     """
 
+    class ANSWER:
+        """ Possible value of Logux commands answers """
+        AUTHENTICATED = 'authenticated'
+        DENIED = 'denied'
+        RESEND = 'resend'
+        APPROVED = 'approved'
+        PROCESSED = 'processed'
+        ERROR = 'error'
+
     @abstractmethod
     def apply(self) -> LoguxValue:
         """ This method consistently apply all Action methods inside of try/catch and construct List of
@@ -253,12 +262,6 @@ class AuthCommand(Command):
           }
         }
     """
-
-    class ANSWER:
-        """ Possible value of AUTH command answers """
-        AUTHENTICATED = 'authenticated'
-        ERROR = 'error'
-        DENIED = 'denied'
 
     auth_id: str
     user_id: str
@@ -328,19 +331,28 @@ class ActionCommand(Command):
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
 
-    def __init__(self, cmd_body: List):
+    def __init__(self, cmd_body: Dict[str, Any]):
         """ Construct Action cmd from raw logux command.
 
         :param cmd_body: raw logux cmd, like:
-           [
-              "action",                                                         // action_type
-              { type: 'user/rename', user: 38, name: 'New' },                   // cmd_body[1]
-              { id: "1560954012838 38:Y7bysd:O0ETfc 0", time: 1560954012838 }   // cmd_body[2]
-            ]
+              {
+                "command": "action",
+                "action": {
+                  "type": "user/rename",
+                  "user": 38,
+                  "name": "New"
+                },
+                "meta": {
+                  "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                  "time": 1560954012838,
+                  "subprotocol": "1.0.0"
+                }
+              }
+
         :type cmd_body: List[Action]
         """
-        self._action: Action = cmd_body[1]
-        self._meta: Meta = Meta(cmd_body[2])
+        self._action: Action = cmd_body['action']
+        self._meta: Meta = Meta(cmd_body['meta'])
 
     @property
     def action(self):
@@ -396,6 +408,7 @@ class ActionCommand(Command):
         logux_add(undo_action, undo_meta)
 
     # Required and optional action methods (these methods should be implemented by consumer)
+    # noinspection PyMethodMayBeStatic
     def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
         """ Callback which will be run on the end of action/subscription processing or on an error """
         return LoguxValue([])
@@ -442,43 +455,89 @@ class ActionCommand(Command):
         """
         pass
 
-    def apply(self) -> List[LoguxValue]:
+    def apply(self) -> LoguxValue:
+        """ Apply all the commands and collect results in the one Logux Value, like:
+            [
+              {
+                "answer": "resend",
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                "channels": ["users/38"]
+              },
+              {
+                "answer": "resend",
+                "id": "1560954012900 38:Y7bysd:O0ETfc 1",
+                "channels": ["users/21"]
+              },
+              {
+                "answer": "approved",
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0"
+              },
+              {
+                "answer": "denied",
+                "id": "1560954012900 38:Y7bysd:O0ETfc 1"
+              },
+              {
+                "answer": "processed",
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0"
+              }
+            ]
+        """
         applying_result = []
 
         # resend
-        resend_result = ['resend', self.meta.id, self.resend(self._action, self._meta)]
+        resend_result = {
+            'answer': self.ANSWER.RESEND,
+            'id': self.meta.id,
+            'channels': self.resend(self._action, self._meta)
+        }
         applying_result.append(resend_result)
 
         # access
         try:
-            access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
+            access_result = {
+                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta) else self.ANSWER.DENIED,
+                'id': self._meta.id
+            }
         except Exception as access_err:  # pylint: disable=broad-except
-            access_result = ['error', self._meta.id, f'{access_err}']
+            access_result = {
+                'answer': self.ANSWER.ERROR,
+                'id': self._meta.id,
+                'details': f'{access_err}'
+            }
 
         applying_result.append(access_result)
 
         # process
-        if access_result[0] == 'approved':
+        if access_result['answer'] == self.ANSWER.APPROVED:
             try:
                 self.process(self._action, self._meta)
-                process_result = ['processed', self._meta.id]
+                process_result = {
+                    'answer': self.ANSWER.PROCESSED,
+                    'id': self._meta.id
+                }
             except Exception as process_err:  # pylint: disable=broad-except
-                process_result = ['error', self._meta.id, f'{process_err}']
+                process_result = {
+                    'answer': self.ANSWER.ERROR,
+                    'id': self._meta.id,
+                    'details': f'{process_err}'
+                }
 
             applying_result.append(process_result)
 
         # finally
         try:
             self._finally(self._action, self._meta)
-            finally_result = []
+            finally_result = {}
         except Exception as finally_err:  # pylint: disable=broad-except
-            finally_result = ['error', self._meta.id, f'{finally_err}']
+            finally_result = {
+                'answer': self.ANSWER.ERROR,
+                'id': self._meta.id,
+                'details': f'{finally_err}'
+            }
 
         applying_result.append(finally_result)
 
-        # TODO: what wrong with this type?
-        # noinspection PyTypeChecker
-        return [r for r in applying_result if len(r) != 0]  # type: ignore
+        return [r for r in applying_result if len(r.items()) != 0]
 
 
 class ChannelCommand(ActionCommand):
