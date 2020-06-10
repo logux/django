@@ -9,13 +9,13 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict, Any
+from typing import List, Callable, Optional, Dict, Any, Union
 
 import requests
 
 from logux import LOGUX_PROTOCOL_VERSION
 from logux import settings
-from logux.exceptions import LoguxProxyException, LoguxBadAuthException
+from logux.exceptions import LoguxProxyException, LoguxBadAuthException, LoguxWrongLoadResultsException
 
 # Logux requests \ response data format
 LoguxValue = List[Dict[str, Any]]
@@ -233,6 +233,7 @@ class Command(ABC):
         RESEND = 'resend'
         APPROVED = 'approved'
         PROCESSED = 'processed'
+        ACTION = 'action'
         UNKNOWN_ACTION = 'unknownAction'
         UNKNOWN_CHANNEL = 'unknownChannel'
         ERROR = 'error'
@@ -589,6 +590,53 @@ class ChannelCommand(ActionCommand):
     def _parse_params(self) -> Dict:
         return re.match(self.channel_pattern, self.channel).groupdict()  # type: ignore
 
+    def _normalize(self, actions: Union[Action, List[Action], List[List[Action]]]) -> List[Dict]:
+        """ self.load could return Action or [Action] or [[Action, raw_meta],].
+        This function will normalize load results to list of Dict to put it to bulk response body.
+        """
+        if not actions:
+            logger.warning('nothing to normalize')
+            return [{}]
+
+        if isinstance(actions, dict):
+            # [...] -> Action case
+            return [{
+                'answer': self.ANSWER.ACTION,
+                'id': self._meta.id,
+                'action': actions,
+                'meta': {'clients': [self.meta.client_id]}
+            }]
+
+        normalized = []
+        if isinstance(actions, list):
+            for action in actions:
+                if isinstance(action, dict):
+                    # [...] -> [Action] case
+                    normalized.append({
+                        'answer': self.ANSWER.ACTION,
+                        'id': self._meta.id,
+                        'action': action,
+                        'meta': {'clients': [self.meta.client_id]}
+                    })
+                if isinstance(action, list):
+                    # [...] -> [[Action, raw_meta],] case
+                    try:
+                        _action, _meta = action
+                        assert isinstance(_action, dict)
+                        assert isinstance(_meta, dict)
+                    except (ValueError, AssertionError):
+                        raise LoguxWrongLoadResultsException("'load' method returns invalid data. It should be "
+                                                             "Action or [Action] or [[Action, raw_meta],] where"
+                                                             "Action and rew_meta is Dict[str, Any]")
+                    normalized.append({
+                        'answer': self.ANSWER.ACTION,
+                        'id': self._meta.id,
+                        'action': _action,
+                        'meta': {'clients': [self.meta.client_id], **_meta}
+                    })
+
+        return normalized
+
     @classmethod
     def is_match(cls, channel: str) -> bool:
         """ Check if the Dispatcher contains channel handler """
@@ -596,7 +644,7 @@ class ChannelCommand(ActionCommand):
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta) -> Action:
+    def load(self, action: Action, meta: Meta) -> Union[Action, List[Action], List[List[Action]]]:
         """ `load` should contain consumer code for applying subscription.
         Generally this method is almost the same as `process`. If it raised exception,
         self.apply will return error action automatically. If `load` return error action
@@ -607,7 +655,8 @@ class ChannelCommand(ActionCommand):
         :param meta: logux meta
         :type meta: Meta
 
-        :returns: Logux action which will be sent back by `self.send_back()`
+        :returns: Logux action or list of actions or list of list with action and meta:
+            Action | Action[] | [Action, raw_meta][] where Action and rew_meta is Dict[str, Any]
         """
         pass
 
@@ -620,20 +669,14 @@ class ChannelCommand(ActionCommand):
         # load
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                action: Action = self.load(self._action, self._meta)
-                self.send_back(action)
-                load_result = {
-                    'answer': self.ANSWER.PROCESSED,
-                    'id': self._meta.id
-                }
+                normalized_actions: List[Action] = self._normalize(self.load(self._action, self._meta))
+                applying_result.extend(normalized_actions)
             except Exception as load_err:  # pylint: disable=broad-except
-                load_result = {
+                applying_result.append({
                     'answer': self.ANSWER.ERROR,
                     'id': self._meta.id,
                     'details': f'{load_err}'
-                }
-
-            applying_result.append(load_result)
+                })
 
         return applying_result
 

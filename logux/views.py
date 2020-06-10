@@ -127,7 +127,7 @@ def dispatch(request: HttpRequest):
 
     :return: JSON response with results of commands applying
     """
-    commands_results = list(LoguxRequest(request).apply_commands())
+    commands_results = LoguxRequest(request).apply_commands()
     for cmd_res in commands_results:
         logger.debug(cmd_res)
 
