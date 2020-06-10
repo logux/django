@@ -282,11 +282,13 @@ class AuthCommand(Command):
               "command": "auth",
               "authId": "gf4Ygi6grYZYDH5Z2BsoR",
               "userId": "38",
-              "token": "parole"
+              "token": "parole", // optional
+              "cookie": {...},
+              "headers": {...}
             }
         :type cmd_body: Dict[str, Any]
         :param logux_auth: function to prove user is authenticated,
-          type hint: `logux_auth(user_id: str, token: str, cookie: Dict, headers: Dict) -> bool`.
+          type hint: `logux_auth(user_id: str, token: str, cookie: dict, headers: dict) -> bool`.
           `logux_auth` function will be taken from settings.get_config()['AUTH_FUNC'] (should be provided by consumer)
         :type logux_auth: Callable[[str, Optional[str], Dict, Dict], bool])
         """
@@ -306,26 +308,22 @@ class AuthCommand(Command):
     def apply(self) -> LoguxValue:
         """ Applying auth command
 
-        :returns:  `authenticated` or `denied` action dependently if user is authenticated.
+        :returns: `authenticated` or `denied` action dependently if user is authenticated.
         """
         try:
             is_authenticated: bool = self.logux_auth(self.user_id, self.token, self.cookie, self.headers)
         except KeyError as err:
             logger.warning("can't apply AUTH func because of missing key: %s", err)
-            return [
-                {
-                    "answer": self.ANSWER.ERROR,
-                    "authId": self.auth_id,
-                    "details": "missing auth token: %s" % err
-                }
-            ]
+            return [{
+                "answer": self.ANSWER.ERROR,
+                "authId": self.auth_id,
+                "details": "missing auth token: %s" % err
+            }]
 
-        return [
-            {
-                'answer': self.ANSWER.AUTHENTICATED if is_authenticated else self.ANSWER.DENIED,
-                'authId': self.auth_id
-            }
-        ]
+        return [{
+            'answer': self.ANSWER.AUTHENTICATED if is_authenticated else self.ANSWER.DENIED,
+            'authId': self.auth_id
+        }]
 
 
 class ActionCommand(Command):
@@ -426,29 +424,11 @@ class ActionCommand(Command):
 
         logux_add(undo_action, undo_meta)
 
-    # Required and optional action methods (these methods should be implemented by consumer)
-    # noinspection PyMethodMayBeStatic
-    def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
-        """ Callback which will be run on the end of action/subscription processing or on an error """
-        return LoguxValue([])
-
-    @abstractmethod
-    def access(self, action: Action, meta: Meta) -> bool:
-        """ `access` is required method and should contain code for checking user permissions.
-
-        :param action: logux action
-        :type action: Action
-        :param meta: logux meta
-        :type meta: Meta
-
-        :returns: does current user have permission for apply this action?
-        """
-        raise NotImplementedError()
-
     def _try_access(self) -> Dict[str, Any]:
         try:
             access_result = {
-                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta) else self.ANSWER.DENIED,
+                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta,
+                                                              self._headers) else self.ANSWER.DENIED,
                 'id': self._meta.id
             }
         except Exception as access_err:  # pylint: disable=broad-except
@@ -459,7 +439,30 @@ class ActionCommand(Command):
             }
         return access_result
 
-    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:  # pylint: disable=unused-argument,no-self-use
+    # Required and optional action methods (these methods should be implemented by consumer)
+    # noinspection PyMethodMayBeStatic
+    def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
+        """ Callback which will be run on the end of action/subscription processing or on an error """
+        return LoguxValue([])
+
+    @abstractmethod
+    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
+        """ `access` is required method and should contain code for checking user permissions.
+
+        :param action: logux action
+        :type action: Action
+        :param meta: logux meta
+        :type meta: Meta
+        :param headers: logux headers
+        :type headers: Dict
+
+        :returns: does current user have permission for apply this action?
+        """
+        raise NotImplementedError()
+
+    def resend(self, action: Action,  # pylint: disable=unused-argument,no-self-use
+               meta: Optional[Meta],  # pylint: disable=unused-argument
+               headers: Dict) -> Dict:  # pylint: disable=unused-argument
         """ `resend` should return recipients for this action.
         It should look like:
         {'channels': ['users/38']}
@@ -471,12 +474,14 @@ class ActionCommand(Command):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+        :param headers: logux headers
+        :type headers: Dict
 
         :returns: dict with recipients
         """
         return {}
 
-    def process(self, action: Action, meta: Meta) -> None:
+    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
         """ `process` should contain consumer business code. If it raised exception,
         self.apply will return error action automatically. If `process` return error action
         Logux server will eval `undo` by this side.
@@ -485,6 +490,8 @@ class ActionCommand(Command):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+        :param headers: logux headers
+        :type headers: Dict
         """
         pass
 
@@ -521,7 +528,7 @@ class ActionCommand(Command):
         resend_result = {
             'answer': self.ANSWER.RESEND,
             'id': self.meta.id,
-            'channels': self.resend(self._action, self._meta)
+            'channels': self.resend(self._action, self._meta, self._headers)
         }
         applying_result.append(resend_result)
 
@@ -532,7 +539,7 @@ class ActionCommand(Command):
         # process
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                self.process(self._action, self._meta)
+                self.process(self._action, self._meta, self._headers)
                 process_result = {
                     'answer': self.ANSWER.PROCESSED,
                     'id': self._meta.id
@@ -686,7 +693,7 @@ class UnknownAction(ActionCommand):
     Will be used and evaluated if actions dispatcher
     got unexpected action type. """
 
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
+    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
         return False
 
     def apply(self) -> LoguxValue:
@@ -706,7 +713,7 @@ class UnknownChannel(ChannelCommand):
     def load(self, action: Action, meta: Meta) -> Action:
         return {}
 
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
+    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
         return False
 
     def apply(self) -> LoguxValue:
