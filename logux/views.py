@@ -5,6 +5,7 @@ from typing import List
 
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 from logux import settings
 from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SUBSCRIBE, \
@@ -120,6 +121,7 @@ class LoguxRequest:
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
 def dispatch(request: HttpRequest):
     """ Entry point for all requests from Logux Proxy
 
