@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 
+from tests.test_app.tests import TEST_CONTROL_SECRET
 from tests.test_app.tests.helpers import LoguxTestCase, PROTO_VER
 
 
@@ -10,7 +11,7 @@ class LoguxServerErrorsTestCase(LoguxTestCase):
         """ unknownAction """
         r: JsonResponse = self.logux_request({
             "version": PROTO_VER,
-            "secret": "secret",
+            "secret": TEST_CONTROL_SECRET,
             "commands": [
                 {
                     "command": "action",
@@ -26,6 +27,5 @@ class LoguxServerErrorsTestCase(LoguxTestCase):
                 }
             ]
         })
-
         self.assertEqual(r[0]['answer'], 'unknownAction', )
         self.assertEqual(r[0]['id'], '1560954012838 38:Y7bysd:O0ETfc 0')

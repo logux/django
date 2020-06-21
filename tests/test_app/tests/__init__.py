@@ -1,0 +1,1 @@
+TEST_CONTROL_SECRET = 'parole'
