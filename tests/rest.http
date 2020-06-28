@@ -65,13 +65,14 @@ Content-Type: application/json
 
 {
     "version": 4,
-    "secret": "secret",
+    "secret": "parole",
     "commands": [
         {
             "command": "auth",
             "authId": "gf4Ygi6grYZYDH5Z2BsoR",
             "userId": "38",
-            "token": "good-token"
+            "token": "good-token",
+            "subprotocol": "2.1.2"
         }
     ]
 }

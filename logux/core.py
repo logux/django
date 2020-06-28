@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import List, Callable, Optional, Dict, Any, Union
 
 import requests
+from semantic_version import Version, NpmSpec
 
 from logux import LOGUX_PROTOCOL_VERSION
 from logux import settings
@@ -237,6 +238,7 @@ class Command(ABC):
         UNKNOWN_ACTION = 'unknownAction'
         UNKNOWN_CHANNEL = 'unknownChannel'
         ERROR = 'error'
+        WRONG_SUBPROTOCOL = 'wrongSubprotocol'
 
     @abstractmethod
     def apply(self) -> LoguxValue:
@@ -269,6 +271,7 @@ class AuthCommand(Command):
     auth_id: str
     user_id: str
     token: Optional[str]
+    subprotocol: Version
     cookie: Dict
     headers: Dict
 
@@ -284,7 +287,8 @@ class AuthCommand(Command):
               "userId": "38",
               "token": "parole", // optional
               "cookie": {...},
-              "headers": {...}
+              "headers": {...},
+              "subprotocol": "1.0.0"
             }
         :type cmd_body: Dict[str, Any]
         :param logux_auth: function to prove user is authenticated,
@@ -299,17 +303,33 @@ class AuthCommand(Command):
             logger.warning('AUTH command does not contain "authId" or "userId" keys')
             raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command')
 
+        self.token = cmd_body.get('token', None)
+
+        try:
+            self.subprotocol = Version(cmd_body['subprotocol'])
+        except ValueError as err:
+            logger.warning('wrong subprotocol format for AUTH command: %s', err)
+            raise LoguxBadAuthException('Wrong subprotocol format for AUTH command: %s' % err)
+
         self.cookie = cmd_body.get('cookie', {})
         self.headers = cmd_body.get('headers', {})
-        self.token = cmd_body.get('token', None)
 
         self.logux_auth = logux_auth
 
     def apply(self) -> LoguxValue:
-        """ Applying auth command
+        """ Applying auth
 
         :returns: `authenticated` or `denied` action dependently if user is authenticated.
         """
+        # TODO: Init NpmSpec(settings.get_config()['SUPPORTS']) int __init__ instead of creating new Object
+        supported_subprotocol = NpmSpec(settings.get_config()['SUPPORTS'])
+        if self.subprotocol not in supported_subprotocol:
+            logger.warning("unsupported subprotocol version: %s expected: %s", self.subprotocol, supported_subprotocol)
+            return [{
+                "answer": self.ANSWER.WRONG_SUBPROTOCOL,
+                "supported": str(supported_subprotocol)
+            }]
+
         try:
             is_authenticated: bool = self.logux_auth(self.user_id, self.token, self.cookie, self.headers)
         except KeyError as err:
