@@ -121,6 +121,10 @@ STATIC_URL = '/static/'
 # TODO: add to Doc: do not use passwords in the settings, use ENV instead
 LOGUX_CONFIG = {
     'URL': 'http://localhost:31337',
-    'CONTROL_SECRET': 'secret',
-    'AUTH_FUNC': (lambda user_id, token, cookie, headers: token == 'good-token') if DEBUG else None
+    'CONTROL_SECRET': 'parole',
+    'AUTH_FUNC': (
+        lambda user_id, token, cookie, headers: token == f'{user_id}:good' or cookie['token'] == f'{user_id}:good'
+    ) if DEBUG else None,
+    'SUBPROTOCOL': '1.0.0',
+    'SUPPORTS': '^1.0.0'
 }
