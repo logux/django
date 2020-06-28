@@ -332,6 +332,8 @@ class AuthCommand(Command):
 
         try:
             is_authenticated: bool = self.logux_auth(self.user_id, self.token, self.cookie, self.headers)
+
+        # TODO: extract errors returns
         except KeyError as err:
             logger.warning("can't apply AUTH func because of missing key: %s", err)
             return [{
@@ -339,9 +341,17 @@ class AuthCommand(Command):
                 "authId": self.auth_id,
                 "details": "missing auth token: %s" % err
             }]
+        except LoguxBadAuthException as err:
+            logger.warning("AUTH err: %s", err)
+            return [{
+                "answer": self.ANSWER.ERROR,
+                "authId": self.auth_id,
+                "details": str(err)
+            }]
 
         return [{
             'answer': self.ANSWER.AUTHENTICATED if is_authenticated else self.ANSWER.DENIED,
+            'subprotocol': settings.get_config()['SUBPROTOCOL'],
             'authId': self.auth_id
         }]
 

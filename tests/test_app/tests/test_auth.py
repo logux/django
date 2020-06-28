@@ -10,8 +10,8 @@ from tests.test_app.tests.helpers import LoguxTestCase, PROTO_VER
 class LoguxAuthTestCase(LoguxTestCase):
     """ Auth command """
 
-    good_token = 'good-token'
     good_user_id = '42'
+    good_token = f'{good_user_id}:good'
 
     def test_success_auth(self) -> None:
         """ Try to auth with:
@@ -28,6 +28,7 @@ class LoguxAuthTestCase(LoguxTestCase):
                     "command": "auth",
                     "authId": "gf4Ygi6grYZYDH5Z2BsoR",
                     "userId": "42",
+                    "subprotocol": "1.0.0",
                     "token": self.good_token,
                 }
             ]
@@ -52,6 +53,7 @@ class LoguxAuthTestCase(LoguxTestCase):
                     "command": "auth",
                     "authId": "gf4Ygi6grYZYDH5Z2BsoR",
                     "userId": "42",
+                    "subprotocol": "1.0.0",
                     "token": "blablabla",
                 }
             ]
@@ -80,6 +82,7 @@ class LoguxAuthWithCookieTestCase(LoguxTestCase):
                         "command": "auth",
                         "authId": "gf4Ygi6grYZYDH5Z2BsoR",
                         "userId": "42",
+                        "subprotocol": "1.0.0",
                         "cookie": {
                             "AuthPassword": self.good_token,
                         }
@@ -101,6 +104,7 @@ class LoguxAuthWithCookieTestCase(LoguxTestCase):
                         "command": "auth",
                         "authId": "gf4Ygi6grYZYDH5Z2BsoR",
                         "userId": "42",
+                        "subprotocol": "1.0.0",
                         "cookie": {
                             "token": self.good_token,
                         }
