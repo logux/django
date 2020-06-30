@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: venv install deps run test ci_test build release clean release_test release_production lint docs
+.PHONY: venv install deps run test ci_test build release clean release_test release_production lint lbt docs
 
 ## Init
 
@@ -18,6 +18,9 @@ lint:  ## Lint and static-check code
 	flake8 logux
 	pylint logux
 	mypy logux
+
+lbt:  ## Run logux-backend integration tests
+	cd lbt && npx @logux/backend-test http://localhost:8000/logux/
 
 test:  ## Run tests (venv)
 	./env/bin/python tests/manage.py test test_app
