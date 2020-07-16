@@ -37,14 +37,13 @@ class RenameUserAction(ActionCommand):
         ]
 
     """
-    action_type = 'user/rename'
+    action_type = 'users/name'
 
-    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
-        return {'channels': [f'users/{action["user"]}']}
+    def resend(self, action: Action, meta: Optional[Meta], headers: Dict) -> Dict:
+        return {'channels': [f"users/{action['payload']['userId']}"]}
 
-    def access(self, action: Action, meta: Meta) -> bool:
-        # user can rename only himself
-        return action['user'] == int(meta.user_id)
+    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
+        return action['payload']['userId'] == int(meta.user_id)
 
     def process(self, action: Action, meta: Optional[Meta]) -> None:
         user = User.objects.get(pk=action['user'])

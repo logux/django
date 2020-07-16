@@ -475,7 +475,7 @@ class ActionCommand(Command):
     # noinspection PyMethodMayBeStatic
     def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
         """ Callback which will be run on the end of action/subscription processing or on an error """
-        return LoguxValue([])
+        return []
 
     @abstractmethod
     def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
