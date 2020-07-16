@@ -327,6 +327,7 @@ class AuthCommand(Command):
             logger.warning("unsupported subprotocol version: %s expected: %s", self.subprotocol, supported_subprotocol)
             return [{
                 "answer": self.ANSWER.WRONG_SUBPROTOCOL,
+                "authId": self.auth_id,
                 "supported": str(supported_subprotocol)
             }]
 
