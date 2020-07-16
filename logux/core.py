@@ -494,7 +494,7 @@ class ActionCommand(Command):
 
     def resend(self, action: Action,  # pylint: disable=unused-argument,no-self-use
                meta: Optional[Meta],  # pylint: disable=unused-argument
-               headers: Dict) -> Dict:  # pylint: disable=unused-argument
+               headers: Dict) -> List[str]:  # pylint: disable=unused-argument
         """ `resend` should return recipients for this action.
         It should look like:
         {'channels': ['users/38']}
@@ -511,7 +511,7 @@ class ActionCommand(Command):
 
         :returns: dict with recipients
         """
-        return {}
+        return []
 
     def process(self, action: Action, meta: Meta, headers: Dict) -> None:
         """ `process` should contain consumer business code. If it raised exception,
@@ -718,6 +718,12 @@ class ChannelCommand(ActionCommand):
                     'id': self._meta.id,
                     'details': f'{load_err}'
                 })
+
+        # processed
+        applying_result.append({
+            'answer': self.ANSWER.PROCESSED,
+            'id': self._meta.id
+        })
 
         return applying_result
 

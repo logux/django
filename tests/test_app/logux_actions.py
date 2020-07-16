@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from django.contrib.auth.models import User
 
@@ -40,14 +40,13 @@ class RenameUserAction(ActionCommand):
     """
     action_type = 'users/name'
 
-    def resend(self, action: Action, meta: Optional[Meta], headers: Dict) -> Dict:
-        return {'channels': [f"users/{action['payload']['userId']}"]}
+    def resend(self, action: Action, meta: Optional[Meta], headers: Dict) -> List[str]:
+        return [f"users/{action['payload']['userId']}"]
 
     def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
         if 'error' in headers:
             raise LoguxProxyException(headers['error'])
-
-        return action['payload']['userId'] == int(meta.user_id)
+        return action['payload']['userId'] == meta.user_id
 
     def process(self, action: Action, meta: Meta, headers: Dict) -> None:
         user = User.objects.get(pk=action['payload']['userId'])

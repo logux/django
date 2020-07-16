@@ -40,8 +40,11 @@ class UserChannel(ChannelCommand):
         if 'error' in headers:
             raise LoguxProxyException(headers['error'])
 
-        user = User.objects.get(pk=self.params['user_id'])
-        return {'type': 'users/name', 'user': 38, 'name': user.first_name}
+        user, _ = User.objects.get_or_create(pk=self.params['user_id'], username='Name')
+        return {
+            'type': 'users/name',
+            'payload': {'userId': str(user.id), 'name': user.first_name}
+        }
 
 
 logux.channels.register(UserChannel)
