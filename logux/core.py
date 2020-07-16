@@ -683,12 +683,13 @@ class ChannelCommand(ActionCommand):
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta) -> Union[Action, List[Action], List[List[Action]]]:
+    def load(self, action: Action, meta: Meta, headers: Dict) -> Union[Action, List[Action], List[List[Action]]]:
         """ `load` should contain consumer code for applying subscription.
         Generally this method is almost the same as `process`. If it raised exception,
         self.apply will return error action automatically. If `load` return error action
         Logux server will eval `undo` by this side.
 
+        :param headers: logux headers
         :param action: logux action
         :type action: Action
         :param meta: logux meta
@@ -709,7 +710,7 @@ class ChannelCommand(ActionCommand):
         # load
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                normalized_actions: List[Action] = self._normalize(self.load(self._action, self._meta))
+                normalized_actions: List[Action] = self._normalize(self.load(self._action, self._meta, self._headers))
                 applying_result.extend(normalized_actions)
             except Exception as load_err:  # pylint: disable=broad-except
                 applying_result.append({
@@ -718,7 +719,6 @@ class ChannelCommand(ActionCommand):
                     'details': f'{load_err}'
                 })
 
-        print(applying_result)
         return applying_result
 
 
@@ -744,7 +744,7 @@ class UnknownChannel(ChannelCommand):
     Will be used and evaluated if actions dispatcher
     got unexpected action type. """
 
-    def load(self, action: Action, meta: Meta) -> Action:
+    def load(self, action: Action, meta: Meta, headers: Dict) -> Action:
         return {}
 
     def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:

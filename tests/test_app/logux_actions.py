@@ -4,11 +4,12 @@ from django.contrib.auth.models import User
 
 from logux.core import ActionCommand, Meta, Action
 from logux.dispatchers import logux
+from logux.exceptions import LoguxProxyException
 
 
 class RenameUserAction(ActionCommand):
     """ Handler for example from https://logux.io/protocols/backend/examples/
-
+    todo: outdated!!!
     Request:
         {
           "version": 1,
@@ -43,11 +44,14 @@ class RenameUserAction(ActionCommand):
         return {'channels': [f"users/{action['payload']['userId']}"]}
 
     def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
+        if 'error' in headers:
+            raise LoguxProxyException(headers['error'])
+
         return action['payload']['userId'] == int(meta.user_id)
 
-    def process(self, action: Action, meta: Optional[Meta]) -> None:
-        user = User.objects.get(pk=action['user'])
-        user.first_name = action['name']
+    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
+        user = User.objects.get(pk=action['payload']['userId'])
+        user.first_name = action['payload']['name']
         user.save()
 
 

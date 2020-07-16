@@ -4,11 +4,12 @@ from django.contrib.auth.models import User
 
 from logux.core import ChannelCommand, Action, Meta
 from logux.dispatchers import logux
+from logux.exceptions import LoguxProxyException
 
 
 class UserChannel(ChannelCommand):
     """ Waiting for request like:
-
+    todo: outdated!!!!
     [
       "action",
       { type: 'logux/subscribe', channel: '38/name' },
@@ -35,7 +36,10 @@ class UserChannel(ChannelCommand):
     def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
         return self.params['user_id'] == meta.user_id
 
-    def load(self, action: Action, meta: Meta) -> Action:
+    def load(self, action: Action, meta: Meta, headers: Dict) -> Action:
+        if 'error' in headers:
+            raise LoguxProxyException(headers['error'])
+
         user = User.objects.get(pk=self.params['user_id'])
         return {'type': 'users/name', 'user': 38, 'name': user.first_name}
 
