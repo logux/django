@@ -235,9 +235,10 @@ class Command(ABC):
         APPROVED = 'approved'
         PROCESSED = 'processed'
         ACTION = 'action'
+        FORBIDDEN = 'forbidden'
+        ERROR = 'error'
         UNKNOWN_ACTION = 'unknownAction'
         UNKNOWN_CHANNEL = 'unknownChannel'
-        ERROR = 'error'
         WRONG_SUBPROTOCOL = 'wrongSubprotocol'
 
     @abstractmethod
@@ -459,7 +460,7 @@ class ActionCommand(Command):
         try:
             access_result = {
                 'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta,
-                                                              self._headers) else self.ANSWER.DENIED,
+                                                              self._headers) else self.ANSWER.FORBIDDEN,
                 'id': self._meta.id
             }
         except Exception as access_err:  # pylint: disable=broad-except
@@ -703,6 +704,7 @@ class ChannelCommand(ActionCommand):
 
         # access
         access_result = self._try_access()
+        applying_result.append(access_result)
 
         # load
         if access_result['answer'] == self.ANSWER.APPROVED:
@@ -716,6 +718,7 @@ class ChannelCommand(ActionCommand):
                     'details': f'{load_err}'
                 })
 
+        print(applying_result)
         return applying_result
 
 

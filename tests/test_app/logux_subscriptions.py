@@ -1,3 +1,5 @@
+from typing import Optional, Dict
+
 from django.contrib.auth.models import User
 
 from logux.core import ChannelCommand, Action, Meta
@@ -28,14 +30,14 @@ class UserChannel(ChannelCommand):
     }
 
     """
-    channel_pattern = r'^user/(?P<user_id>\w+)$'
+    channel_pattern = r'^users/(?P<user_id>\w+)$'
 
-    def access(self, action: Action, meta: Meta) -> bool:
+    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
         return self.params['user_id'] == meta.user_id
 
     def load(self, action: Action, meta: Meta) -> Action:
         user = User.objects.get(pk=self.params['user_id'])
-        return {'type': 'user/name', 'user': 38, 'name': user.first_name}
+        return {'type': 'users/name', 'user': 38, 'name': user.first_name}
 
 
 logux.channels.register(UserChannel)

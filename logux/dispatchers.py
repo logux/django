@@ -49,7 +49,7 @@ class DefaultActionDispatcher(BaseActionDispatcher):
 
 
 class DefaultChannelDispatcher(BaseActionDispatcher):
-    """  Default logux Dispatcher for Channels """
+    """ Default logux Dispatcher for Channels """
     _subs: Dict[str, Type[ChannelCommand]] = {}
 
     def __str__(self):
@@ -60,7 +60,7 @@ class DefaultChannelDispatcher(BaseActionDispatcher):
             if sub.is_match(channel=item):
                 return sub
 
-        logger.warning("can't match channel name: %s. tried these URL patterns: ", self)
+        logger.warning("can't match channel name: %s", item)
 
         # TODO: should it be UnknownSubscription?
         return UnknownAction
