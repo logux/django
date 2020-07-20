@@ -84,7 +84,7 @@ class DefaultChannelDispatcher(BaseActionDispatcher):
         return True
 
     def register(self, action: Type[ChannelCommand]):  # type: ignore # noqa
-        if self._sub_is_valid(action):
+        if self._sub_is_valid(action) and action.channel_pattern is not None:
             logger.info('registering subscription for `%s`', action.channel_pattern)
             self._subs[action.channel_pattern] = action
 

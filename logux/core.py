@@ -619,7 +619,7 @@ class ChannelCommand(ActionCommand):
     action_type = LOGUX_SUBSCRIBE
     # regexp, like in urls.py
     # TODO: https://github.com/logux/django/issues/38
-    channel_pattern: str
+    channel_pattern: Optional[str]
 
     def __init__(self, cmd_body: Dict[str, Any]):
         super().__init__(cmd_body)
