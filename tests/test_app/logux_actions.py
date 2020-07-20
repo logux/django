@@ -27,7 +27,7 @@ class RenameUserAction(ActionCommand):
 
 
 class CleanUserAction(ActionCommand):
-    """ On users/clean action sends users/name action to the Logux Server for all users with the name. """
+    """ On users/clean action set all names to "" and sends users/name action with new name to all clients """
     action_type = 'users/clean'
 
     def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
@@ -36,15 +36,9 @@ class CleanUserAction(ActionCommand):
         return True
 
     def process(self, action: Action, meta: Meta, headers: Dict) -> None:
-        # self.send_back({
-        #     'type': 'users/name',
-        #     'payload':
-        #         {
-        #             'userId': '10',
-        #             'name': ''
-        #         }
-        # })
         for u in User.objects.all():
+            u.first_name = ''
+            u.save()
             self.send_back({
                 'type': 'users/name',
                 'payload':
