@@ -1,7 +1,7 @@
 import json
 import logging
 from itertools import chain
-from typing import List
+from typing import List, Tuple, Union
 
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -47,7 +47,8 @@ class LoguxRequest:
         self.version: int = int(self._body['version'])
 
         if not protocol_version_is_supported(self.version):
-            raise LoguxProxyException('Unsupported protocol version: %s' % self.version)
+            logger.warning('Unsupported protocol version: %s', self.version)
+            raise LoguxProxyException('Back-end protocol version is not supported')
 
         self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
@@ -93,7 +94,7 @@ class LoguxRequest:
         """ Check Logux proxy server secret """
         return self._body['secret'] == settings.get_config()['CONTROL_SECRET']
 
-    def apply_commands(self) -> (int, LoguxValue):
+    def apply_commands(self) -> Tuple[int, Union[str, LoguxValue]]:
         """ Apply all actions commands one by one
 
         :return: List of command applying results
@@ -105,7 +106,7 @@ class LoguxRequest:
             return 403, err_msg
 
         if len(self.commands) == 0:
-            return [
+            return 200, [
                 {
                     'answer': Command.ANSWER.ERROR,
                     'details': 'command list is empty'
@@ -124,7 +125,11 @@ def dispatch(request: HttpRequest):
 
     :return: JSON response with results of commands applying
     """
-    status, commands_results = LoguxRequest(request).apply_commands()
+    try:
+        status, commands_results = LoguxRequest(request).apply_commands()
+    except LoguxProxyException as err:
+        status, commands_results = (400, str(err))
+
     if status != 200:
         r = HttpResponse(commands_results)
         r.status_code = status
