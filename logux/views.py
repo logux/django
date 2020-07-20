@@ -3,7 +3,7 @@ import logging
 from itertools import chain
 from typing import List
 
-from django.http import JsonResponse, HttpRequest
+from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -93,21 +93,16 @@ class LoguxRequest:
         """ Check Logux proxy server secret """
         return self._body['secret'] == settings.get_config()['CONTROL_SECRET']
 
-    def apply_commands(self) -> LoguxValue:
+    def apply_commands(self) -> (int, LoguxValue):
         """ Apply all actions commands one by one
 
         :return: List of command applying results
         """
         if not self._is_server_authenticated():
             # TODO: extract to common way to error response
-            err_msg = 'Unauthorised Logux proxy server'
+            err_msg = 'Wrong secret'
             logger.warning(err_msg)
-            return [
-                {
-                    'answer': Command.ANSWER.ERROR,
-                    'details': err_msg
-                }
-            ]
+            return 403, err_msg
 
         if len(self.commands) == 0:
             return [
@@ -117,7 +112,7 @@ class LoguxRequest:
                 }
             ]
 
-        return list(filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands])))
+        return 200, list(filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands])))
 
 
 @csrf_exempt
@@ -129,8 +124,15 @@ def dispatch(request: HttpRequest):
 
     :return: JSON response with results of commands applying
     """
-    commands_results = LoguxRequest(request).apply_commands()
+    status, commands_results = LoguxRequest(request).apply_commands()
+    if status != 200:
+        r = HttpResponse(commands_results)
+        r.status_code = status
+        return r
+
     for cmd_res in commands_results:
         logger.debug(cmd_res)
 
-    return JsonResponse(commands_results, safe=False)
+    r = JsonResponse(commands_results, safe=False)
+    r.status_code = status
+    return r
