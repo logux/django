@@ -42,21 +42,29 @@ class LoguxRequest:
         :param request: request with command from Logux Proxy
         :raises: base Exception if request protocol version is not supported by backend
         """
-        self._body = json.loads(request.body.decode('utf-8'))
-
-        self.version: int = int(self._body['version'])
+        try:
+            self._get_body(request)
+        except (TypeError, ValueError) as err:
+            logger.warning('Wrong body: %s', err)
+            raise LoguxProxyException('Wrong body')
 
         if not protocol_version_is_supported(self.version):
             logger.warning('Unsupported protocol version: %s', self.version)
             raise LoguxProxyException('Back-end protocol version is not supported')
 
-        self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
+
+    def _get_body(self, request: HttpRequest):
+        _body = json.loads(request.body.decode('utf-8'))
+
+        self.version: int = int(_body['version'])
+        self.secret: str = _body['secret']
+        self.raw_commands = _body['commands']
 
     def _parse_commands(self) -> List[Command]:
         commands: List[Command] = []
 
-        for cmd in self._body['commands']:
+        for cmd in self.raw_commands:
             cmd_type = cmd['command']
 
             if cmd_type == self.CommandType.AUTH:
@@ -92,7 +100,7 @@ class LoguxRequest:
 
     def _is_server_authenticated(self) -> bool:
         """ Check Logux proxy server secret """
-        return self._body['secret'] == settings.get_config()['CONTROL_SECRET']
+        return self.secret == settings.get_config()['CONTROL_SECRET']
 
     def apply_commands(self) -> Tuple[int, Union[str, LoguxValue]]:
         """ Apply all actions commands one by one
