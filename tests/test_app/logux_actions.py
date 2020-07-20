@@ -8,35 +8,7 @@ from logux.exceptions import LoguxProxyException
 
 
 class RenameUserAction(ActionCommand):
-    """ Handler for example from https://logux.io/protocols/backend/examples/
-    todo: outdated!!!
-    Request:
-        {
-          "version": 1,
-          "secret": "secret",
-          "commands": [
-            [
-              "action",
-              { type: 'user/rename', user: 38, name: 'New' },
-              { id: "1560954012838 38:Y7bysd:O0ETfc 0", time: 1560954012838 }
-            ],
-            [
-              "action",
-              { type: 'user/rename', user: 21, name: 'New' },
-              { id: "1560954012900 38:Y7bysd:O0ETfc 1", time: 1560954012900 }
-            ]
-          ]
-        }
-
-    Response:
-        [
-          ["resend", "1560954012838 38:Y7bysd:O0ETfc 0", { "channels": ["users/38"] }],
-          ["resend", "1560954012900 38:Y7bysd:O0ETfc 1", { "channels": ["users/21"] }],
-          ["approved", "1560954012838 38:Y7bysd:O0ETfc 0"],
-          ["denied", "1560954012900 38:Y7bysd:O0ETfc 1"],
-          ["processed", "1560954012838 38:Y7bysd:O0ETfc 0"]
-        ]
-
+    """ TODO: this
     """
     action_type = 'users/name'
 
@@ -54,4 +26,34 @@ class RenameUserAction(ActionCommand):
         user.save()
 
 
+class CleanUserAction(ActionCommand):
+    """ On users/clean action sends users/name action to the Logux Server for all users with the name. """
+    action_type = 'users/clean'
+
+    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
+        if 'error' in headers:
+            raise LoguxProxyException(headers['error'])
+        return True
+
+    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
+        # self.send_back({
+        #     'type': 'users/name',
+        #     'payload':
+        #         {
+        #             'userId': '10',
+        #             'name': ''
+        #         }
+        # })
+        for u in User.objects.all():
+            self.send_back({
+                'type': 'users/name',
+                'payload':
+                    {
+                        'userId': str(u.id),
+                        'name': str(u.first_name)
+                    }
+            })
+
+
 logux.actions.register(RenameUserAction)
+logux.actions.register(CleanUserAction)
