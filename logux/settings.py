@@ -21,14 +21,14 @@ if DEBUG:
 # @lru_cache()
 def get_config():
     """ Get default configs and marge it with a user's config """
-    USER_CONFIG = getattr(settings, "LOGUX_CONFIG", {})
-    CONFIG = CONFIG_DEFAULTS.copy()
-    CONFIG.update(USER_CONFIG)
+    user_config = getattr(settings, "LOGUX_CONFIG", {})
+    config = CONFIG_DEFAULTS.copy()
+    config.update(user_config)
 
-    if CONFIG['CONTROL_SECRET'] is None:
+    if config['CONTROL_SECRET'] is None:
         raise ValueError("can't get CONTROL_SECRET")
 
-    if CONFIG['AUTH_FUNC'] is None:
+    if config['AUTH_FUNC'] is None:
         raise ValueError('AUTH_FUNC is required! Set auth function in your settings.py')
 
-    return CONFIG
+    return config

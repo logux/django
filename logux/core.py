@@ -211,7 +211,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
 
     logger.debug('logux_add action %s with meta %s to Logux', action, raw_meta or {})
 
-    r = requests.post(url=settings.get_config()['LOGUX_URL'], json=command)
+    r = requests.post(url=settings.get_config()['URL'], json=command)
     logger.debug('Logux answer is %s: %s', r.status_code, r.text)
 
     if r.status_code != 200:
@@ -627,7 +627,7 @@ class ChannelCommand(ActionCommand):
         self.params = self._parse_params()
 
     def _parse_params(self) -> Dict:
-        return re.match(self.channel_pattern, self.channel).groupdict()  # type: ignore
+        return re.match(self.channel_pattern, self.channel).groupdict() if self.channel_pattern else {}  # type: ignore
 
     def _normalize(self, actions: Union[Action, List[Action], List[List[Action]]]) -> List[Dict]:
         """ self.load could return Action or [Action] or [[Action, raw_meta],].
@@ -745,10 +745,12 @@ class UnknownAction(ActionCommand):
         ]
 
 
-class UnknownChannel(ChannelCommand):
+class UnknownSubscription(ChannelCommand):
     """ Action for generation `unknownChannel` error.
     Will be used and evaluated if actions dispatcher
     got unexpected action type. """
+
+    channel_pattern = None
 
     def load(self, action: Action, meta: Meta, headers: Dict) -> Action:
         return {}

@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Union, Type
 
-from logux.core import ActionCommand, ChannelCommand, UnknownAction
+from logux.core import ActionCommand, ChannelCommand, UnknownAction, UnknownSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +62,7 @@ class DefaultChannelDispatcher(BaseActionDispatcher):
 
         logger.warning("can't match channel name: %s", item)
 
-        # TODO: should it be UnknownSubscription?
-        return UnknownAction
+        return UnknownSubscription
 
     def has_subscription(self, channel_pattern: str) -> bool:
         """ Check if Dispatcher has handler for a particular channel subscription type """

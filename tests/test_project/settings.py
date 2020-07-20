@@ -137,7 +137,7 @@ def auth_func(user_id: str, token: str, cookie: dict, headers: dict) -> bool:
 
 # TODO: add to Doc: do not use passwords in the settings, use ENV instead
 LOGUX_CONFIG = {
-    'URL': 'http://localhost:31337',
+    'URL': 'http://localhost:31337/',
     'CONTROL_SECRET': 'parole',
     'AUTH_FUNC': auth_func if DEBUG else None,
     'SUBPROTOCOL': '1.0.0',
