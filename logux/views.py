@@ -105,7 +105,7 @@ class LoguxRequest:
     def apply_commands(self) -> Tuple[int, Union[str, LoguxValue]]:
         """ Apply all actions commands one by one
 
-        :return: List of command applying results
+        :return: HTTP code and List of command applying results or error message
         """
         if not self._is_server_authenticated():
             # TODO: extract to common way to error response
