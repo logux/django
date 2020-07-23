@@ -123,6 +123,9 @@ class Meta:  # pylint: disable=too-many-instance-attributes
 
         return False
 
+    def __str__(self):
+        return self.get_json()
+
     # Helpers
     def _get_uid(self):
         try:
@@ -374,7 +377,6 @@ class ActionCommand(Command):
     # `action_type` is a required property, if the property does not define
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
-    _last_action_datetime: datetime
 
     def __init__(self, cmd_body: Dict[str, Any]):
         """ Construct Action cmd from raw logux command.
@@ -403,15 +405,6 @@ class ActionCommand(Command):
         self._meta: Meta = Meta(cmd_body['meta'])
         # TODO: add headers to access, resend, process funcs signatures
         self._headers = cmd_body.get('headers', {})
-        self.last_action_datetime = self.__class__._get_last_action_datetime()
-
-    @classmethod
-    def _set_last_action_datetime(cls, dt: datetime):
-        cls._last_action_datetime = dt
-
-    @classmethod
-    def _get_last_action_datetime(cls) -> Optional[datetime]:
-        return cls._last_action_datetime if hasattr(cls, '_last_action_datetime') else None
 
     @property
     def action(self):
@@ -581,8 +574,7 @@ class ActionCommand(Command):
         # process
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                if self.last_action_datetime is None or self.meta.time > self.last_action_datetime:
-                    self.process(self._action, self._meta, self._headers)
+                self.process(self._action, self._meta, self._headers)
                 process_result = {
                     'answer': self.ANSWER.PROCESSED,
                     'id': self._meta.id
@@ -609,12 +601,7 @@ class ActionCommand(Command):
 
         applying_result.append(finally_result)
 
-        self._update_last_action_datetime()
         return [r for r in applying_result if len(r.items()) != 0]
-
-    def _update_last_action_datetime(self):
-        # pylint: disable=protected-access
-        self.__class__._set_last_action_datetime(self.meta.time)
 
 
 class ChannelCommand(ActionCommand):

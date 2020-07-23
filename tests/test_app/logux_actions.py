@@ -1,10 +1,10 @@
+import json
 from typing import Optional, Dict, List
-
-from django.contrib.auth.models import User
 
 from logux.core import ActionCommand, Meta, Action
 from logux.dispatchers import logux
 from logux.exceptions import LoguxProxyException
+from tests.test_app.models import User
 
 
 class RenameUserAction(ActionCommand):
@@ -22,8 +22,12 @@ class RenameUserAction(ActionCommand):
 
     def process(self, action: Action, meta: Meta, headers: Dict) -> None:
         user = User.objects.get(pk=action['payload']['userId'])
-        user.first_name = action['payload']['name']
-        user.save()
+        first_name_meta = json.loads(user.first_name_meta)
+
+        if not first_name_meta or meta > Meta(first_name_meta):
+            user.first_name = action['payload']['name']
+            user.first_name_meta = meta.get_json()
+            user.save()
 
 
 class CleanUserAction(ActionCommand):

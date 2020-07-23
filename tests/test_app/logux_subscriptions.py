@@ -1,10 +1,9 @@
 from typing import Optional, Dict
 
-from django.contrib.auth.models import User
-
 from logux.core import ChannelCommand, Action, Meta
 from logux.dispatchers import logux
 from logux.exceptions import LoguxProxyException
+from tests.test_app.models import User
 
 
 class UserChannel(ChannelCommand):
@@ -40,7 +39,7 @@ class UserChannel(ChannelCommand):
         if 'error' in headers:
             raise LoguxProxyException(headers['error'])
 
-        user, _ = User.objects.get_or_create(pk=self.params['user_id'], username='Name')
+        user, _ = User.objects.get_or_create(id=self.params['user_id'], username='Name')
         return {
             'type': 'users/name',
             'payload': {'userId': str(user.id), 'name': user.first_name}
