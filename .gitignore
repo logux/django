@@ -130,3 +130,7 @@ dmypy.json
 
 # sqlite3
 *.sqlite3
+
+# PIDs
+*.PID
+*.pid
