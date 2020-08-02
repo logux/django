@@ -1,3 +1,4 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
@@ -11,3 +12,11 @@ class Cat(models.Model):
 
     def __str__(self):
         return f'Cat {self.name} {self.age} years old'
+
+
+class User(AbstractUser):
+    first_name_meta = models.TextField(default='{}')
+
+    class Meta:
+        verbose_name = 'user'
+        verbose_name_plural = 'users'

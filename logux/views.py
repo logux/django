@@ -1,17 +1,17 @@
 import json
 import logging
 from itertools import chain
-from typing import List, Iterable
+from typing import List, Tuple, Union
 
-from django.http import JsonResponse, HttpRequest
+from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 from logux import settings
 from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SUBSCRIBE, \
     protocol_version_is_supported
 from logux.dispatchers import logux
 from logux.exceptions import LoguxProxyException
-from logux.settings import LOGUX_CONTROL_SECRET
 
 logger = logging.getLogger(__name__)
 
@@ -42,76 +42,90 @@ class LoguxRequest:
         :param request: request with command from Logux Proxy
         :raises: base Exception if request protocol version is not supported by backend
         """
-        self._body = json.loads(request.body.decode('utf-8'))
+        try:
+            self._get_body(request)
+        except (TypeError, ValueError) as err:
+            logger.warning('Wrong body: %s', err)
+            raise LoguxProxyException('Wrong body')
 
-        self.version: int = int(self._body['version'])
-        # TODO: should I crush App here?
         if not protocol_version_is_supported(self.version):
-            # TODO: extract to custom logux exception
-            raise LoguxProxyException(f'Unsupported protocol version: {self.version}')
+            logger.warning('Unsupported protocol version: %s', self.version)
+            raise LoguxProxyException('Back-end protocol version is not supported')
 
-        self.secret: str = self._body['secret']
         self.commands: List[Command] = self._parse_commands()
+
+    def _get_body(self, request: HttpRequest):
+        _body = json.loads(request.body.decode('utf-8'))
+
+        self.version: int = int(_body['version'])
+        self.secret: str = _body['secret']
+        self.raw_commands = _body['commands']
 
     def _parse_commands(self) -> List[Command]:
         commands: List[Command] = []
 
-        for cmd in self._body['commands']:
-            cmd_type = cmd[0]
+        for cmd in self.raw_commands:
+            cmd_type = cmd['command']
 
             if cmd_type == self.CommandType.AUTH:
                 logger.debug('got auth cmd: %s', cmd)
-                commands.append(AuthCommand(cmd, settings.LOGUX_AUTH_FUNC))
+                commands.append(AuthCommand(cmd, settings.get_config()['AUTH_FUNC']))
 
             elif cmd_type == self.CommandType.ACTION:
                 logger.debug('got action: %s', cmd)
-                action_type = cmd[1]['type']
+                action_type = cmd['action']['type']
 
                 # subscribe actions
                 if action_type == LOGUX_SUBSCRIBE:
-                    channel = cmd[1]["channel"]
+                    channel = cmd['action']["channel"]
                     logger.debug('got subscription for channel: %s', channel)
                     commands.append(logux.channels[channel](cmd))
                     continue
 
                 # custom actions
                 if not logux.actions.has_action(action_type):
-                    logger.error('unknown action: %s', action_type)
+                    logger.warning('unknown action: %s', action_type)
                     commands.append(UnknownAction(cmd))
                     continue
 
                 commands.append(logux.actions[action_type](cmd))
 
             else:
-                logger.error('wrong command type: %s', cmd)
+                logger.warning('wrong command type: %s', cmd)
                 err_msg = f'wrong command type: {cmd_type}, expected {self.CommandType.choices}'
-                logger.error(err_msg)
+                logger.warning(err_msg)
                 logger.warning('command with wrong type will be ignored')
 
         return commands
 
     def _is_server_authenticated(self) -> bool:
         """ Check Logux proxy server secret """
-        return self._body['secret'] == LOGUX_CONTROL_SECRET
+        return self.secret == settings.get_config()['CONTROL_SECRET']
 
-    def apply_commands(self) -> Iterable[LoguxValue]:
+    def apply_commands(self) -> Tuple[int, Union[str, LoguxValue]]:
         """ Apply all actions commands one by one
 
-        :return: List of command applying results
+        :return: HTTP code and List of command applying results or error message
         """
         if not self._is_server_authenticated():
             # TODO: extract to common way to error response
-            err_msg = 'Unauthorised Logux proxy server'
+            err_msg = 'Wrong secret'
             logger.warning(err_msg)
-            return [LoguxValue(['error', {}, err_msg])]
+            return 403, err_msg
 
         if len(self.commands) == 0:
-            return [LoguxValue(['error', {}, 'command list is empty'])]
+            return 200, [
+                {
+                    'answer': Command.ANSWER.ERROR,
+                    'details': 'command list is empty'
+                }
+            ]
 
-        return filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands]))
+        return 200, list(filter(None, chain.from_iterable([cmd.apply() for cmd in self.commands])))
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
 def dispatch(request: HttpRequest):
     """ Entry point for all requests from Logux Proxy
 
@@ -119,8 +133,19 @@ def dispatch(request: HttpRequest):
 
     :return: JSON response with results of commands applying
     """
-    commands_results = list(LoguxRequest(request).apply_commands())
+    try:
+        status, commands_results = LoguxRequest(request).apply_commands()
+    except LoguxProxyException as err:
+        status, commands_results = (400, str(err))
+
+    if status != 200:
+        r = HttpResponse(commands_results)
+        r.status_code = status
+        return r
+
     for cmd_res in commands_results:
         logger.debug(cmd_res)
 
-    return JsonResponse(commands_results, safe=False)
+    r = JsonResponse(commands_results, safe=False)
+    r.status_code = status
+    return r

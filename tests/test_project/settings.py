@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+from logux.exceptions import LoguxBadAuthException
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Quick-start development settings - unsuitable for production
@@ -35,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'logux',
 
     'tests.test_app',
 ]
@@ -115,10 +119,29 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
+AUTH_USER_MODEL = 'test_app.User'
+
+
 # Logux settings: https://logux.io/guide/starting/proxy-server/
+def auth_func(user_id: str, token: str, cookie: dict, headers: dict) -> bool:
+    """ Custom AUTH functions to pass https://github.com/logux/backend-test """
+    err = headers.pop('error', None)
+    if err:
+        raise LoguxBadAuthException(err)
+
+    good_token = f'{user_id}:good'
+    if token:
+        return token == good_token
+
+    return cookie['token'] == good_token
+
+
 # TODO: add to Doc: do not use passwords in the settings, use ENV instead
-LOGUX_CONTROL_SECRET = "secret"
-
-LOGUX_URL = "http://localhost:31337"
-
-LOGUX_AUTH_FUNC = (lambda user_id, token: token == 'good-token') if DEBUG else None
+LOGUX_CONFIG = {
+    'URL': 'http://localhost:31337/',
+    'CONTROL_SECRET': 'parole',
+    'AUTH_FUNC': auth_func if DEBUG else None,
+    'SUBPROTOCOL': '1.0.0',
+    'SUPPORTS': '^1.0.0'
+}

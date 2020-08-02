@@ -34,9 +34,13 @@ Add `path(r'logux/', include('logux.urls')),` into your `urls.py`
 Sets Logux settings in your `settings.py`:
 ```python
 # Logux settings: https://logux.io/guide/starting/proxy-server/
-LOGUX_CONTROL_SECRET = "secret"
-LOGUX_URL = "http://localhost:31338"
-LOGUX_AUTH_FUNC = your_auth_function #  your_auth_function(user_id, token: str) -> bool
+LOGUX_CONFIG = {
+    'URL': 'http://localhost:31337',
+    'CONTROL_SECRET': 'secret',
+
+    #  your_auth_function(user_id: str, token: str, cookie: Dict, headers: Dict) -> bool
+    'AUTH_FUNC': your_auth_function 
+}
 ```
 
 _Storing passwords or secrets in `settings.py` is bad practice. Use ENV._
@@ -127,11 +131,9 @@ class UserChannel(ChannelCommand):
     def access(self, action: Action, meta: Meta) -> bool:
         return self.params['user_id'] == meta.user_id
 
-    def load(self, action: Action, meta: Meta):
+    def load(self, action: Action, meta: Meta) -> Action:
         user = User.objects.get(pk=self.params['user_id'])
-        self.send_back(
-            {'type': 'user/name', 'user': 38, 'name': user.first_name}
-        )
+        return {'type': 'user/name', 'user': 38, 'name': user.first_name}
 
 
 logux.channels.register(UserChannel)

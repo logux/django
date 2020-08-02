@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: venv install deps run test ci_test build release clean release_test release_production lint docs
+.PHONY: venv install deps run test ci_test build release clean release_test release_production lint lbt docs
 
 ## Init
 
@@ -18,6 +18,23 @@ lint:  ## Lint and static-check code
 	flake8 logux
 	pylint logux
 	mypy logux
+
+lbt:  ## Run logux-backend integration tests
+	cd lbt && npx @logux/backend-test http://localhost:8000/logux/
+
+integration_test:  ## Up Django backend and run backend-test
+	./env/bin/python tests/manage.py migrate && ./env/bin/python tests/manage.py wipe_db
+	./env/bin/python tests/manage.py runserver --settings=tests.test_project.test_settings & echo $$! > django.PID
+	sleep 3
+	cd lbt && npx @logux/backend-test http://localhost:8000/logux/ || echo "FAIL" > ../test_result.tmp
+
+	if [ -a test_result.tmp ]; then \
+		kill -TERM $$(cat django.PID); \
+		rm -f test_result.tmp django.PID && exit 1; \
+	fi;
+
+	kill -TERM $$(cat django.PID)
+	rm -f test_result.tmp django.PID
 
 test:  ## Run tests (venv)
 	./env/bin/python tests/manage.py test test_app

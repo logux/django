@@ -9,16 +9,17 @@ import re
 from abc import abstractmethod, ABC
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Callable, Optional, Dict, NewType, Union, Sequence, Any
+from typing import List, Callable, Optional, Dict, Any, Union
 
 import requests
-from django.conf import settings
+from semantic_version import Version, NpmSpec
 
 from logux import LOGUX_PROTOCOL_VERSION
-from logux.exceptions import LoguxProxyException
+from logux import settings
+from logux.exceptions import LoguxProxyException, LoguxBadAuthException, LoguxWrongLoadResultsException
 
 # Logux requests \ response data format
-LoguxValue = NewType("LoguxValue", Sequence[Union[Dict, str]])
+LoguxValue = List[Dict[str, Any]]
 
 Action = Dict[str, Any]
 logger = logging.getLogger(__name__)
@@ -122,6 +123,9 @@ class Meta:  # pylint: disable=too-many-instance-attributes
 
         return False
 
+    def __str__(self):
+        return self.get_json()
+
     # Helpers
     def _get_uid(self):
         try:
@@ -192,26 +196,25 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
     :param action: action dict
     :param raw_meta: meta dict (not Meta instance)
 
-    TODO: extract this exception into custom error class -> logux/exception.py
-    :raises: base Exception() if Logux Proxy returns non 200 response code
+    :raises: base LoguxProxyException() if Logux Proxy returns non 200 response code
 
     :return: None
     """
     command = {
-        "version": LOGUX_PROTOCOL_VERSION,
-        "secret": settings.LOGUX_CONTROL_SECRET,
-        "commands": [
-            [
-                "action",
-                action,
-                raw_meta or {}
-            ]
+        'version': LOGUX_PROTOCOL_VERSION,
+        'secret': settings.get_config()['CONTROL_SECRET'],
+        'commands': [
+            {
+                'command': 'action',
+                'action': action,
+                'meta': raw_meta or {}
+            }
         ]
     }
 
     logger.debug('logux_add action %s with meta %s to Logux', action, raw_meta or {})
 
-    r = requests.post(url=settings.LOGUX_URL, json=command)
+    r = requests.post(url=settings.get_config()['URL'], json=command)
     logger.debug('Logux answer is %s: %s', r.status_code, r.text)
 
     if r.status_code != 200:
@@ -223,14 +226,27 @@ class Command(ABC):
     """ Logux Command abstract class.
     All type of Logux Commands should be inheritance from this one.
 
-    Required ony one method `apply()` witch executing command and return LoguxValue
+    Required only one method `apply()` witch executing command and return LoguxValue
       with an answer or error a message.
     """
 
+    class ANSWER:
+        """ Possible value of Logux commands answers """
+        AUTHENTICATED = 'authenticated'
+        DENIED = 'denied'
+        RESEND = 'resend'
+        APPROVED = 'approved'
+        PROCESSED = 'processed'
+        ACTION = 'action'
+        FORBIDDEN = 'forbidden'
+        ERROR = 'error'
+        UNKNOWN_ACTION = 'unknownAction'
+        UNKNOWN_CHANNEL = 'unknownChannel'
+        WRONG_SUBPROTOCOL = 'wrongSubprotocol'
+
     @abstractmethod
-    def apply(self) -> List[LoguxValue]:
-        """
-         This method consistently apply all Action methods inside of try/catch and construct List of
+    def apply(self) -> LoguxValue:
+        """ This method consistently apply all Action methods inside of try/catch and construct List of
         LoguxValue's with action methods results or error messages.
 
         :return: list of results of applying all actions methods
@@ -241,56 +257,154 @@ class Command(ABC):
 class AuthCommand(Command):
     """ Logux Auth Command provide way to check is the User authenticated.
 
-    TODO: this class should be ActionCommand probably
+    Auth command should look like Object:
+        {
+          command: "auth",
+          authId: string,
+          userId: string,
+          token?: string,
+          cookie: {
+            [name]: string
+          },
+          headers: {
+            [name]: string
+          }
+        }
     """
-    user_id: str
-    token: str
-    auth_id: str
 
-    def __init__(self, cmd_body: Dict[str, str], logux_auth: Callable[[str, str], bool]):
+    auth_id: str
+    user_id: str
+    token: Optional[str]
+    subprotocol: Version
+    cookie: Dict
+    headers: Dict
+
+    def __init__(self,
+                 cmd_body: Dict[str, Any],
+                 logux_auth: Callable[[str, Optional[str], Dict, Dict], bool]):
         """ Construct Auth cmd from raw logux command.
 
-        :param cmd_body: raw logux command, like ["auth", "38", "good-token", "gf4Ygi6grYZYDH5Z2BsoR"]
-        :type cmd_body: List[str]
+        :param cmd_body: raw logux command, like
+            {
+              "command": "auth",
+              "authId": "gf4Ygi6grYZYDH5Z2BsoR",
+              "userId": "38",
+              "token": "parole", // optional
+              "cookie": {...},
+              "headers": {...},
+              "subprotocol": "1.0.0"
+            }
+        :type cmd_body: Dict[str, Any]
         :param logux_auth: function to prove user is authenticated,
-          type hint: `logux_auth(user_id: str, token: str) -> bool`. `logux_auth` function will be injected from
-          settings.LOGUX_AUTH_FUNC (should be provided by consumer)
-        :type logux_auth: Callable[[str, str], bool]
+          type hint: `logux_auth(user_id: str, token: str, cookie: dict, headers: dict) -> bool`.
+          `logux_auth` function will be taken from settings.get_config()['AUTH_FUNC'] (should be provided by consumer)
+        :type logux_auth: Callable[[str, Optional[str], Dict, Dict], bool])
         """
-        _, self.user_id, self.token, self.auth_id = cmd_body
+        try:
+            self.auth_id = cmd_body['authId']
+            self.user_id = cmd_body['userId']
+        except KeyError:
+            logger.warning('AUTH command does not contain "authId" or "userId" keys')
+            raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command')
+
+        self.token = cmd_body.get('token', None)
+
+        try:
+            self.subprotocol = Version(cmd_body['subprotocol'])
+        except ValueError as err:
+            logger.warning('wrong subprotocol format for AUTH command: %s', err)
+            raise LoguxBadAuthException('Wrong subprotocol format for AUTH command: %s' % err)
+
+        self.cookie = cmd_body.get('cookie', {})
+        self.headers = cmd_body.get('headers', {})
+
         self.logux_auth = logux_auth
 
-    def apply(self) -> List[LoguxValue]:
-        """ Applying auth command
+    def apply(self) -> LoguxValue:
+        """ Applying auth
 
-        :returns:  `authenticated` or `denied` action dependently if user is authenticated.
+        :returns: `authenticated` or `denied` action dependently if user is authenticated.
         """
-        is_authenticated: bool = self.logux_auth(self.user_id, self.token)
-        logger.warning('user: %s is not authenticated', self.user_id)
-        auth_id: str = self.auth_id
-        return [LoguxValue(['authenticated' if is_authenticated else 'denied', auth_id])]
+        # TODO: Init NpmSpec(settings.get_config()['SUPPORTS']) int __init__ instead of creating new Object
+        supported_subprotocol = NpmSpec(settings.get_config()['SUPPORTS'])
+        if self.subprotocol not in supported_subprotocol:
+            logger.warning("unsupported subprotocol version: %s expected: %s", self.subprotocol, supported_subprotocol)
+            return [{
+                "answer": self.ANSWER.WRONG_SUBPROTOCOL,
+                "authId": self.auth_id,
+                "supported": str(supported_subprotocol)
+            }]
+
+        try:
+            is_authenticated: bool = self.logux_auth(self.user_id, self.token, self.cookie, self.headers)
+
+        # TODO: extract errors returns
+        except KeyError as err:
+            logger.warning("can't apply AUTH func because of missing key: %s", err)
+            return [{
+                "answer": self.ANSWER.ERROR,
+                "authId": self.auth_id,
+                "details": "missing auth token: %s" % err
+            }]
+        except LoguxBadAuthException as err:
+            logger.warning("AUTH err: %s", err)
+            return [{
+                "answer": self.ANSWER.ERROR,
+                "authId": self.auth_id,
+                "details": str(err)
+            }]
+
+        return [{
+            'answer': self.ANSWER.AUTHENTICATED if is_authenticated else self.ANSWER.DENIED,
+            'subprotocol': settings.get_config()['SUBPROTOCOL'],
+            'authId': self.auth_id
+        }]
 
 
 class ActionCommand(Command):
     """ Logux Action Command provide way to handle actions from Logux Proxy.
+
+    Action command should look like Object:
+        {
+          command: "action",
+          action: Action,
+          meta: Meta,
+          headers: {
+            [name]: string
+          }
+        }
     """
-    # `action_type` is a required property, if the property does not defined
+    # `action_type` is a required property, if the property does not define
     #    DefaultActionDispatcher will raise ValueError('`action_type` attribute is required for all Actions') Exception
     action_type: str
 
-    def __init__(self, cmd_body: List):
+    def __init__(self, cmd_body: Dict[str, Any]):
         """ Construct Action cmd from raw logux command.
 
         :param cmd_body: raw logux cmd, like:
-           [
-              "action",                                                         // action_type
-              { type: 'user/rename', user: 38, name: 'New' },                   // cmd_body[1]
-              { id: "1560954012838 38:Y7bysd:O0ETfc 0", time: 1560954012838 }   // cmd_body[2]
-            ]
+              {
+                "command": "action",
+                "action": {
+                  "type": "user/rename",
+                  "user": 38,
+                  "name": "New"
+                },
+                "meta": {
+                  "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                  "time": 1560954012838,
+                  "subprotocol": "1.0.0"
+                },
+                headers: {
+                    "key": "value"
+                }
+              }
+
         :type cmd_body: List[Action]
         """
-        self._action: Action = cmd_body[1]
-        self._meta: Meta = Meta(cmd_body[2])
+        self._action: Action = cmd_body['action']
+        self._meta: Meta = Meta(cmd_body['meta'])
+        # TODO: add headers to access, resend, process funcs signatures
+        self._headers = cmd_body.get('headers', {})
 
     @property
     def action(self):
@@ -345,25 +459,45 @@ class ActionCommand(Command):
 
         logux_add(undo_action, undo_meta)
 
+    def _try_access(self) -> Dict[str, Any]:
+        try:
+            access_result = {
+                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta,
+                                                              self._headers) else self.ANSWER.FORBIDDEN,
+                'id': self._meta.id
+            }
+        except Exception as access_err:  # pylint: disable=broad-except
+            access_result = {
+                'answer': self.ANSWER.ERROR,
+                'id': self._meta.id,
+                'details': f'{access_err}'
+            }
+        return access_result
+
     # Required and optional action methods (these methods should be implemented by consumer)
+    # noinspection PyMethodMayBeStatic
     def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
         """ Callback which will be run on the end of action/subscription processing or on an error """
-        return LoguxValue([])
+        return []
 
     @abstractmethod
-    def access(self, action: Action, meta: Meta) -> bool:
+    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
         """ `access` is required method and should contain code for checking user permissions.
 
         :param action: logux action
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+        :param headers: logux headers
+        :type headers: Dict
 
         :returns: does current user have permission for apply this action?
         """
         raise NotImplementedError()
 
-    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:  # pylint: disable=unused-argument,no-self-use
+    def resend(self, action: Action,  # pylint: disable=unused-argument,no-self-use
+               meta: Optional[Meta],  # pylint: disable=unused-argument
+               headers: Dict) -> List[str]:  # pylint: disable=unused-argument
         """ `resend` should return recipients for this action.
         It should look like:
         {'channels': ['users/38']}
@@ -375,12 +509,14 @@ class ActionCommand(Command):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+        :param headers: logux headers
+        :type headers: Dict
 
         :returns: dict with recipients
         """
-        return {}
+        return []
 
-    def process(self, action: Action, meta: Meta) -> None:
+    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
         """ `process` should contain consumer business code. If it raised exception,
         self.apply will return error action automatically. If `process` return error action
         Logux server will eval `undo` by this side.
@@ -389,46 +525,83 @@ class ActionCommand(Command):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+        :param headers: logux headers
+        :type headers: Dict
         """
         pass
 
-    def apply(self) -> List[LoguxValue]:
+    def apply(self) -> LoguxValue:
+        """ Apply all the commands and collect results in the one Logux Value, like:
+            [
+              {
+                "answer": "resend",
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0",
+                "channels": ["users/38"]
+              },
+              {
+                "answer": "resend",
+                "id": "1560954012900 38:Y7bysd:O0ETfc 1",
+                "channels": ["users/21"]
+              },
+              {
+                "answer": "approved",
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0"
+              },
+              {
+                "answer": "denied",
+                "id": "1560954012900 38:Y7bysd:O0ETfc 1"
+              },
+              {
+                "answer": "processed",
+                "id": "1560954012838 38:Y7bysd:O0ETfc 0"
+              }
+            ]
+        """
         applying_result = []
 
         # resend
-        resend_result = ['resend', self.meta.id, self.resend(self._action, self._meta)]
+        resend_result = {
+            'answer': self.ANSWER.RESEND,
+            'id': self.meta.id,
+            'channels': self.resend(self._action, self._meta, self._headers)
+        }
         applying_result.append(resend_result)
 
         # access
-        try:
-            access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
-        except Exception as access_err:  # pylint: disable=broad-except
-            access_result = ['error', self._meta.id, f'{access_err}']
-
+        access_result = self._try_access()
         applying_result.append(access_result)
 
         # process
-        if access_result[0] == 'approved':
+        if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                self.process(self._action, self._meta)
-                process_result = ['processed', self._meta.id]
+                self.process(self._action, self._meta, self._headers)
+                process_result = {
+                    'answer': self.ANSWER.PROCESSED,
+                    'id': self._meta.id
+                }
             except Exception as process_err:  # pylint: disable=broad-except
-                process_result = ['error', self._meta.id, f'{process_err}']
+                process_result = {
+                    'answer': self.ANSWER.ERROR,
+                    'id': self._meta.id,
+                    'details': f'{process_err}'
+                }
 
             applying_result.append(process_result)
 
         # finally
         try:
             self._finally(self._action, self._meta)
-            finally_result = []
+            finally_result = {}
         except Exception as finally_err:  # pylint: disable=broad-except
-            finally_result = ['error', self._meta.id, f'{finally_err}']
+            finally_result = {
+                'answer': self.ANSWER.ERROR,
+                'id': self._meta.id,
+                'details': f'{finally_err}'
+            }
 
         applying_result.append(finally_result)
 
-        # TODO: what wrong with this type?
-        # noinspection PyTypeChecker
-        return [r for r in applying_result if len(r) != 0]  # type: ignore
+        return [r for r in applying_result if len(r.items()) != 0]
 
 
 class ChannelCommand(ActionCommand):
@@ -448,15 +621,63 @@ class ChannelCommand(ActionCommand):
     #   ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
     action_type = LOGUX_SUBSCRIBE
     # regexp, like in urls.py
-    channel_pattern: str
+    # TODO: https://github.com/logux/django/issues/38
+    channel_pattern: Optional[str]
 
-    def __init__(self, cmd_body: List[Action]):
+    def __init__(self, cmd_body: Dict[str, Any]):
         super().__init__(cmd_body)
-        self.channel = cmd_body[1]['channel']
+        self.channel = self._action['channel']
         self.params = self._parse_params()
 
     def _parse_params(self) -> Dict:
-        return re.match(self.channel_pattern, self.channel).groupdict()  # type: ignore
+        return re.match(self.channel_pattern, self.channel).groupdict() if self.channel_pattern else {}  # type: ignore
+
+    def _normalize(self, actions: Union[Action, List[Action], List[List[Action]]]) -> List[Dict]:
+        """ self.load could return Action or [Action] or [[Action, raw_meta],].
+        This function will normalize load results to list of Dict to put it to bulk response body.
+        """
+        if not actions:
+            logger.warning('nothing to normalize')
+            return [{}]
+
+        if isinstance(actions, dict):
+            # [...] -> Action case
+            return [{
+                'answer': self.ANSWER.ACTION,
+                'id': self._meta.id,
+                'action': actions,
+                'meta': {'clients': [self.meta.client_id]}
+            }]
+
+        normalized = []
+        if isinstance(actions, list):
+            for action in actions:
+                if isinstance(action, dict):
+                    # [...] -> [Action] case
+                    normalized.append({
+                        'answer': self.ANSWER.ACTION,
+                        'id': self._meta.id,
+                        'action': action,
+                        'meta': {'clients': [self.meta.client_id]}
+                    })
+                if isinstance(action, list):
+                    # [...] -> [[Action, raw_meta],] case
+                    try:
+                        _action, _meta = action
+                        assert isinstance(_action, dict)
+                        assert isinstance(_meta, dict)
+                    except (ValueError, AssertionError):
+                        raise LoguxWrongLoadResultsException("'load' method returns invalid data. It should be "
+                                                             "Action or [Action] or [[Action, raw_meta],] where"
+                                                             "Action and rew_meta is Dict[str, Any]")
+                    normalized.append({
+                        'answer': self.ANSWER.ACTION,
+                        'id': self._meta.id,
+                        'action': _action,
+                        'meta': {'clients': [self.meta.client_id], **_meta}
+                    })
+
+        return normalized
 
     @classmethod
     def is_match(cls, channel: str) -> bool:
@@ -465,37 +686,47 @@ class ChannelCommand(ActionCommand):
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta) -> None:
+    def load(self, action: Action, meta: Meta, headers: Dict) -> Union[Action, List[Action], List[List[Action]]]:
         """ `load` should contain consumer code for applying subscription.
         Generally this method is almost the same as `process`. If it raised exception,
         self.apply will return error action automatically. If `load` return error action
         Logux server will eval `undo` by this side.
 
+        :param headers: logux headers
         :param action: logux action
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
+
+        :returns: Logux action or list of actions or list of list with action and meta:
+            Action | Action[] | [Action, raw_meta][] where Action and rew_meta is Dict[str, Any]
         """
         pass
 
-    def apply(self) -> List[LoguxValue]:
+    def apply(self) -> LoguxValue:
         applying_result = []
 
         # access
-        try:
-            access_result = ['approved' if self.access(self._action, self._meta) else 'denied', self._meta.id]
-        except Exception as access_err:  # pylint: disable=broad-except
-            access_result = ['error', self._meta.id, f'{access_err}']
+        access_result = self._try_access()
+        applying_result.append(access_result)
 
         # load
-        if access_result[0] == 'approved':
+        if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                self.load(self._action, self._meta)
-                load_result = ['processed', self._meta.id]
+                normalized_actions: List[Action] = self._normalize(self.load(self._action, self._meta, self._headers))
+                applying_result.extend(normalized_actions)
             except Exception as load_err:  # pylint: disable=broad-except
-                load_result = ['error', self._meta.id, f'{load_err}']
+                applying_result.append({
+                    'answer': self.ANSWER.ERROR,
+                    'id': self._meta.id,
+                    'details': f'{load_err}'
+                })
 
-            applying_result.append(LoguxValue(load_result))
+        # processed
+        applying_result.append({
+            'answer': self.ANSWER.PROCESSED,
+            'id': self._meta.id
+        })
 
         return applying_result
 
@@ -503,10 +734,37 @@ class ChannelCommand(ActionCommand):
 class UnknownAction(ActionCommand):
     """ Action for generation `unknownAction` error.
     Will be used and evaluated if actions dispatcher
-    got unexpected action type """
+    got unexpected action type. """
 
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
+    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
         return False
 
-    def apply(self) -> List[LoguxValue]:
-        return [LoguxValue(['unknownAction', self._meta.id])]
+    def apply(self) -> LoguxValue:
+        return [
+            {
+                'answer': self.ANSWER.UNKNOWN_ACTION,
+                'id': self._meta.id
+            }
+        ]
+
+
+class UnknownSubscription(ChannelCommand):
+    """ Action for generation `unknownChannel` error.
+    Will be used and evaluated if actions dispatcher
+    got unexpected action type. """
+
+    channel_pattern = None
+
+    def load(self, action: Action, meta: Meta, headers: Dict) -> Action:
+        return {}
+
+    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
+        return False
+
+    def apply(self) -> LoguxValue:
+        return [
+            {
+                'answer': self.ANSWER.UNKNOWN_CHANNEL,
+                'id': self._meta.id
+            }
+        ]

@@ -2,7 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Union, Type
 
-from logux.core import ActionCommand, ChannelCommand, UnknownAction
+from logux.core import ActionCommand, ChannelCommand, UnknownAction, UnknownSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class DefaultActionDispatcher(BaseActionDispatcher):
 
 
 class DefaultChannelDispatcher(BaseActionDispatcher):
-    """  Default logux Dispatcher for Channels """
+    """ Default logux Dispatcher for Channels """
     _subs: Dict[str, Type[ChannelCommand]] = {}
 
     def __str__(self):
@@ -60,10 +60,9 @@ class DefaultChannelDispatcher(BaseActionDispatcher):
             if sub.is_match(channel=item):
                 return sub
 
-        logger.warning("can't match channel name: %s. tried these URL patterns: ", self)
+        logger.warning("can't match channel name: %s", item)
 
-        # TODO: should it be UnknownSubscription?
-        return UnknownAction
+        return UnknownSubscription
 
     def has_subscription(self, channel_pattern: str) -> bool:
         """ Check if Dispatcher has handler for a particular channel subscription type """
@@ -85,7 +84,7 @@ class DefaultChannelDispatcher(BaseActionDispatcher):
         return True
 
     def register(self, action: Type[ChannelCommand]):  # type: ignore # noqa
-        if self._sub_is_valid(action):
+        if self._sub_is_valid(action) and action.channel_pattern is not None:
             logger.info('registering subscription for `%s`', action.channel_pattern)
             self._subs[action.channel_pattern] = action
 
