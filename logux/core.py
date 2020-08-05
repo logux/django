@@ -462,8 +462,8 @@ class ActionCommand(Command):
     def _try_access(self) -> Dict[str, Any]:
         try:
             access_result = {
-                'answer': self.ANSWER.APPROVED if self.access(self._action, self._meta,
-                                                              self._headers) else self.ANSWER.FORBIDDEN,
+                'answer': self.ANSWER.APPROVED if self.access(action=self._action, meta=self._meta,
+                                                              headers=self._headers) else self.ANSWER.FORBIDDEN,
                 'id': self._meta.id
             }
         except Exception as access_err:  # pylint: disable=broad-except
@@ -563,7 +563,7 @@ class ActionCommand(Command):
         resend_result = {
             'answer': self.ANSWER.RESEND,
             'id': self.meta.id,
-            'channels': self.resend(self._action, self._meta, self._headers)
+            'channels': self.resend(action=self._action, meta=self._meta, headers=self._headers)
         }
         applying_result.append(resend_result)
 
@@ -574,7 +574,7 @@ class ActionCommand(Command):
         # process
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                self.process(self._action, self._meta, self._headers)
+                self.process(action=self._action, meta=self._meta, headers=self._headers)
                 process_result = {
                     'answer': self.ANSWER.PROCESSED,
                     'id': self._meta.id
@@ -713,7 +713,8 @@ class ChannelCommand(ActionCommand):
         # load
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                normalized_actions: List[Action] = self._normalize(self.load(self._action, self._meta, self._headers))
+                normalized_actions: List[Action] = self._normalize(
+                    self.load(action=self._action, meta=self._meta, headers=self._headers))
                 applying_result.extend(normalized_actions)
             except Exception as load_err:  # pylint: disable=broad-except
                 applying_result.append({
