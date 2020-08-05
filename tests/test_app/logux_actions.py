@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Dict, List
+from typing import Optional, List
 
 from logux.core import ActionCommand, Meta, Action
 from logux.dispatchers import logux
@@ -8,19 +8,19 @@ from tests.test_app.models import User
 
 
 class RenameUserAction(ActionCommand):
-    """ TODO: this
-    """
+    """ During the subscription to users/USER_ID channel sends { type: "users/name", payload: { userId, name } }
+    action with the latest user’s name. """
     action_type = 'users/name'
 
-    def resend(self, action: Action, meta: Optional[Meta], headers: Dict) -> List[str]:
+    def resend(self, action: Action, meta: Optional[Meta]) -> List[str]:
         return [f"users/{action['payload']['userId']}"]
 
-    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
-        if 'error' in headers:
-            raise LoguxProxyException(headers['error'])
+    def access(self, action: Action, meta: Meta) -> bool:
+        if 'error' in self.headers:
+            raise LoguxProxyException(self.headers['error'])
         return action['payload']['userId'] == meta.user_id
 
-    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
+    def process(self, action: Action, meta: Meta) -> None:
         user = User.objects.get(pk=action['payload']['userId'])
         first_name_meta = json.loads(user.first_name_meta)
 
@@ -34,12 +34,12 @@ class CleanUserAction(ActionCommand):
     """ On users/clean action set all names to "" and sends users/name action with new name to all clients """
     action_type = 'users/clean'
 
-    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
-        if 'error' in headers:
-            raise LoguxProxyException(headers['error'])
+    def access(self, action: Action, meta: Meta) -> bool:
+        if 'error' in self.headers:
+            raise LoguxProxyException(self.headers['error'])
         return True
 
-    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
+    def process(self, action: Action, meta: Meta) -> None:
         for u in User.objects.all():
             u.first_name = ''
             u.save()

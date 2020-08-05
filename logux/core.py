@@ -416,6 +416,11 @@ class ActionCommand(Command):
         """ Get copy of Meta. Do not change internal meta state from outside. """
         return deepcopy(self._meta)
 
+    @property
+    def headers(self):
+        """ Get copy of headers. Do not change internal headers state from outside. """
+        return deepcopy(self._headers)
+
     def send_back(self, action: Action, raw_meta: Optional[Dict] = None) -> None:
         """ Sand action with meta back to Logux. Will add `clients` from original action to the meta.
         For more information: https://logux.io/guide/concepts/action/#adding-actions-on-the-server
@@ -462,8 +467,8 @@ class ActionCommand(Command):
     def _try_access(self) -> Dict[str, Any]:
         try:
             access_result = {
-                'answer': self.ANSWER.APPROVED if self.access(action=self._action, meta=self._meta,
-                                                              headers=self._headers) else self.ANSWER.FORBIDDEN,
+                'answer': self.ANSWER.APPROVED if self.access(
+                    action=self._action, meta=self._meta) else self.ANSWER.FORBIDDEN,
                 'id': self._meta.id
             }
         except Exception as access_err:  # pylint: disable=broad-except
@@ -475,29 +480,26 @@ class ActionCommand(Command):
         return access_result
 
     # Required and optional action methods (these methods should be implemented by consumer)
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def _finally(self, action: Action, meta: Meta) -> LoguxValue:  # pylint: disable=unused-argument,no-self-use
         """ Callback which will be run on the end of action/subscription processing or on an error """
         return []
 
     @abstractmethod
-    def access(self, action: Action, meta: Meta, headers: Dict) -> bool:
+    def access(self, action: Action, meta: Meta) -> bool:
         """ `access` is required method and should contain code for checking user permissions.
 
         :param action: logux action
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
-        :param headers: logux headers
-        :type headers: Dict
 
         :returns: does current user have permission for apply this action?
         """
         raise NotImplementedError()
 
     def resend(self, action: Action,  # pylint: disable=unused-argument,no-self-use
-               meta: Optional[Meta],  # pylint: disable=unused-argument
-               headers: Dict) -> List[str]:  # pylint: disable=unused-argument
+               meta: Optional[Meta]) -> List[str]:  # pylint: disable=unused-argument
         """ `resend` should return recipients for this action.
         It should look like:
         {'channels': ['users/38']}
@@ -509,14 +511,12 @@ class ActionCommand(Command):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
-        :param headers: logux headers
-        :type headers: Dict
 
         :returns: dict with recipients
         """
         return []
 
-    def process(self, action: Action, meta: Meta, headers: Dict) -> None:
+    def process(self, action: Action, meta: Meta) -> None:
         """ `process` should contain consumer business code. If it raised exception,
         self.apply will return error action automatically. If `process` return error action
         Logux server will eval `undo` by this side.
@@ -525,8 +525,6 @@ class ActionCommand(Command):
         :type action: Action
         :param meta: logux meta
         :type meta: Meta
-        :param headers: logux headers
-        :type headers: Dict
         """
         pass
 
@@ -563,7 +561,7 @@ class ActionCommand(Command):
         resend_result = {
             'answer': self.ANSWER.RESEND,
             'id': self.meta.id,
-            'channels': self.resend(action=self._action, meta=self._meta, headers=self._headers)
+            'channels': self.resend(action=self._action, meta=self._meta)
         }
         applying_result.append(resend_result)
 
@@ -574,7 +572,7 @@ class ActionCommand(Command):
         # process
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
-                self.process(action=self._action, meta=self._meta, headers=self._headers)
+                self.process(action=self._action, meta=self._meta)
                 process_result = {
                     'answer': self.ANSWER.PROCESSED,
                     'id': self._meta.id
@@ -616,7 +614,7 @@ class ChannelCommand(ActionCommand):
         { id: "1560954012858 38:Y7bysd:O0ETfc 0", time: 1560954012858 }
     ]
     """
-    # `channel_pattern` is required property, if property does not defined
+    # `channel_pattern` is required property, if property does not define
     #   DefaultSubscriptionsDispatcher will raise
     #   ValueError('`channel_pattern` attribute is required for `logux/subscription` Actions') Exception
     action_type = LOGUX_SUBSCRIBE
@@ -686,13 +684,12 @@ class ChannelCommand(ActionCommand):
 
     # Required and optional action methods (these methods should be implemented by consumer)
     @abstractmethod
-    def load(self, action: Action, meta: Meta, headers: Dict) -> Union[Action, List[Action], List[List[Action]]]:
+    def load(self, action: Action, meta: Meta) -> Union[Action, List[Action], List[List[Action]]]:
         """ `load` should contain consumer code for applying subscription.
         Generally this method is almost the same as `process`. If it raised exception,
         self.apply will return error action automatically. If `load` return error action
         Logux server will eval `undo` by this side.
 
-        :param headers: logux headers
         :param action: logux action
         :type action: Action
         :param meta: logux meta
@@ -714,7 +711,7 @@ class ChannelCommand(ActionCommand):
         if access_result['answer'] == self.ANSWER.APPROVED:
             try:
                 normalized_actions: List[Action] = self._normalize(
-                    self.load(action=self._action, meta=self._meta, headers=self._headers))
+                    self.load(action=self._action, meta=self._meta))
                 applying_result.extend(normalized_actions)
             except Exception as load_err:  # pylint: disable=broad-except
                 applying_result.append({
@@ -737,7 +734,7 @@ class UnknownAction(ActionCommand):
     Will be used and evaluated if actions dispatcher
     got unexpected action type. """
 
-    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return False
 
     def apply(self) -> LoguxValue:
@@ -756,10 +753,10 @@ class UnknownSubscription(ChannelCommand):
 
     channel_pattern = None
 
-    def load(self, action: Action, meta: Meta, headers: Dict) -> Action:
+    def load(self, action: Action, meta: Meta) -> Action:
         return {}
 
-    def access(self, action: Action, meta: Optional[Meta], headers: Dict) -> bool:
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return False
 
     def apply(self) -> LoguxValue:
