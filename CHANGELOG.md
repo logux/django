@@ -1,10 +1,11 @@
-#  (2020-08-02)
+#  (2020-08-05)
 
 
 ### Bug Fixes
 
 * add test app init migration ([a3c9e25](https://github.com/logux/django/commit/a3c9e256cd12b1805b7ae1ff735b1450a4515d20))
 * apply_commands types ([e6ff52d](https://github.com/logux/django/commit/e6ff52dd60ecc2f644ef8009006f17180c10773b))
+* call resend with named args, close [#42](https://github.com/logux/django/issues/42) ([24e0de0](https://github.com/logux/django/commit/24e0de00bf0e6105899381c2c0a61fbc87ca731c))
 * change "stack" field to "details", tests. ([0ed4804](https://github.com/logux/django/commit/0ed480456c16ccfb41474b53eb12cf03923476ed))
 * channel_pattern type ([480651e](https://github.com/logux/django/commit/480651e9fe86c89cf7fd8d42d8edbf4acfbeb1d9))
 * checks version ([cf7efac](https://github.com/logux/django/commit/cf7efac7d1114386289ce0283fc0331982bbd4ab))
@@ -13,6 +14,7 @@
 * forbidden answer for sub action ([b01138d](https://github.com/logux/django/commit/b01138d49025126e9f8f412ccc1cf15765e881d1))
 * missing docstring ([4e93947](https://github.com/logux/django/commit/4e939477bed0ccf66a45a23b855cbe3672cc99a7))
 * pylint satisfaction ([c28c160](https://github.com/logux/django/commit/c28c16018aa2568013c48b982fb0fcef4c91b607))
+* remove headers arg from Actions callbacks. close [#43](https://github.com/logux/django/issues/43) ([d529198](https://github.com/logux/django/commit/d5291981beea9578ad0bb62a86b07c14424e784d))
 * reset test app migration ([0c28303](https://github.com/logux/django/commit/0c283037fb8167550191023e9456debda5873eca))
 * test refactoring, cleanup ([a216c90](https://github.com/logux/django/commit/a216c90e1ae2769c24d99b64165359845d692fb4))
 * tests types ([f7cf769](https://github.com/logux/django/commit/f7cf769c5dadc84af00f89ea0d7e1740ad39fcb1))
