@@ -88,17 +88,17 @@ class RenameUserAction(ActionCommand):
 
     action_type = 'user/rename'
     
-        def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
-            return {'channels': [f'users/{action["user"]}']}
+    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
+        return {'channels': [f'users/{action["user"]}']}
     
-        def access(self, action: Action, meta: Meta) -> bool:
-            # user can rename only himself
-            return action['user'] == int(meta.user_id)
+    def access(self, action: Action, meta: Meta) -> bool:
+       # user can rename only himself
+       return action['user'] == int(meta.user_id)
     
-        def process(self, action: Action, meta: Optional[Meta]) -> None:
-            user = User.objects.get(pk=action['user'])
-            user.first_name = action['name']
-            user.save()
+    def process(self, action: Action, meta: Optional[Meta]) -> None:
+       user = User.objects.get(pk=action['user'])
+       user.first_name = action['name']
+       user.save()
 
 
 logux.actions.register(RenameUserAction)
