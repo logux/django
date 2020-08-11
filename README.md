@@ -12,7 +12,7 @@ Django [Logux](https://logux.io/) integration engine.
 * **[Projects](https://logux.io/guide/architecture/parts/)**
   inside Logux ecosystem
 
-![Logux Proto](https://img.shields.io/badge/logux%20protocol-3-brightgreen)
+![Logux Proto](https://img.shields.io/badge/logux%20protocol-3(4RC)-brightgreen)
 [![PyPI version](https://badge.fury.io/py/logux-django.svg)](https://badge.fury.io/py/logux-django)
 ![Travis CI](https://travis-ci.org/logux/django.svg?branch=master)
 ![Lint and Test](https://github.com/logux/django/workflows/Lint%20and%20Test/badge.svg)
@@ -35,11 +35,11 @@ Sets Logux settings in your `settings.py`:
 ```python
 # Logux settings: https://logux.io/guide/starting/proxy-server/
 LOGUX_CONFIG = {
-    'URL': 'http://localhost:31337',
-    'CONTROL_SECRET': 'secret',
-
-    #  your_auth_function(user_id: str, token: str, cookie: Dict, headers: Dict) -> bool
-    'AUTH_FUNC': your_auth_function 
+    'URL': 'http://localhost:31337/',
+    'CONTROL_SECRET': 'parole',
+    'AUTH_FUNC': auth_func,  # auth_func(user_id: str, token: str, cookie: dict, headers: dict) -> bool
+    'SUBPROTOCOL': '1.0.0',
+    'SUPPORTS': '^1.0.0'
 }
 ```
 
@@ -75,30 +75,34 @@ Actions classes requirements:
 
 For example – User rename action handler:
 ```python
-from typing import Optional, Dict
-
-from django.contrib.auth.models import User
+import json
+from typing import Optional, List
 
 from logux.core import ActionCommand, Meta, Action
 from logux.dispatchers import logux
-
+from logux.exceptions import LoguxProxyException
+from tests.test_app.models import User
 
 class RenameUserAction(ActionCommand):
-    """ Action Handler for example from https://logux.io/protocols/backend/examples/ """
 
-    action_type = 'user/rename'
-    
-    def resend(self, action: Action, meta: Optional[Meta]) -> Dict:
-        return {'channels': [f'users/{action["user"]}']}
-    
+    action_type = 'users/name'
+
+    def resend(self, action: Action, meta: Optional[Meta]) -> List[str]:
+        return [f"users/{action['payload']['userId']}"]
+
     def access(self, action: Action, meta: Meta) -> bool:
-       # user can rename only himself
-       return action['user'] == int(meta.user_id)
-    
-    def process(self, action: Action, meta: Optional[Meta]) -> None:
-       user = User.objects.get(pk=action['user'])
-       user.first_name = action['name']
-       user.save()
+        if 'error' in self.headers:
+            raise LoguxProxyException(self.headers['error'])
+        return action['payload']['userId'] == meta.user_id
+
+    def process(self, action: Action, meta: Meta) -> None:
+        user = User.objects.get(pk=action['payload']['userId'])
+        first_name_meta = json.loads(user.first_name_meta)
+
+        if not first_name_meta or meta > Meta(first_name_meta):
+            user.first_name = action['payload']['name']
+            user.first_name_meta = meta.get_json()
+            user.save()
 
 
 logux.actions.register(RenameUserAction)
@@ -119,21 +123,30 @@ Subscription classes requirements:
 
 For example:
 ```python
-from django.contrib.auth.models import User
+from typing import Optional
 
 from logux.core import ChannelCommand, Action, Meta
 from logux.dispatchers import logux
+from logux.exceptions import LoguxProxyException
+from tests.test_app.models import User
 
 
 class UserChannel(ChannelCommand):
-    channel_pattern = r'^user/(?P<user_id>\w+)$'
 
-    def access(self, action: Action, meta: Meta) -> bool:
+    channel_pattern = r'^users/(?P<user_id>\w+)$'
+
+    def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return self.params['user_id'] == meta.user_id
 
     def load(self, action: Action, meta: Meta) -> Action:
-        user = User.objects.get(pk=self.params['user_id'])
-        return {'type': 'user/name', 'user': 38, 'name': user.first_name}
+        if 'error' in self.headers:
+            raise LoguxProxyException(self.headers['error'])
+
+        user, _ = User.objects.get_or_create(id=self.params['user_id'], username='Name')
+        return {
+            'type': 'users/name',
+            'payload': {'userId': str(user.id), 'name': user.first_name}
+        }
 
 
 logux.channels.register(UserChannel)
@@ -170,6 +183,11 @@ make lint
 Test:
 ```shell script
 make test
+```
+
+Integration tests (up server and run [backend-test](https://github.com/logux/backend-test)):
+```shell script
+make integration_test
 ```
 
 ## License
