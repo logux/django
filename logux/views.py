@@ -133,7 +133,6 @@ def dispatch(request: HttpRequest) -> HttpResponse:
 
     :return: JSON response with results of commands applying
     """
-    print(request.missing_field)  # will break
     try:
         status, commands_results = LoguxRequest(request).apply_commands()
     except LoguxProxyException as err:
