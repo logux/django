@@ -36,7 +36,7 @@ class LoguxRequest:
 
         choices = [AUTH, ACTION]
 
-    def __init__(self, request: HttpRequest):
+    def __init__(self, request: HttpRequest) -> None:
         """ Construct the Command and check protocol version support.
 
         :param request: request with command from Logux Proxy
@@ -54,7 +54,7 @@ class LoguxRequest:
 
         self.commands: List[Command] = self._parse_commands()
 
-    def _get_body(self, request: HttpRequest):
+    def _get_body(self, request: HttpRequest) -> None:
         _body = json.loads(request.body.decode('utf-8'))
 
         self.version: int = int(_body['version'])
@@ -126,7 +126,7 @@ class LoguxRequest:
 
 @csrf_exempt
 @require_http_methods(["POST"])
-def dispatch(request: HttpRequest):
+def dispatch(request: HttpRequest) -> HttpResponse:
     """ Entry point for all requests from Logux Proxy
 
     :param request: HTTP request from Logux Proxy server.
