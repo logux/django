@@ -10,7 +10,7 @@ install:  ## Install this pkg by setup.py (venv)
 	env/bin/pip install -e .
 
 deps:  ## Install dev dependencies (global)
-	pip install black coverage flake8 mccabe mypy pylint
+	pip install black coverage flake8 mccabe mypy django-stubs pylint
 
 ## Code quality
 
