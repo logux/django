@@ -9,5 +9,10 @@ class LoguxBadAuthException(Exception):
 
 
 class LoguxWrongLoadResultsException(Exception):
-    """ load method of ChannelCommand returns invalid data. """
+    """ `load` method of ChannelCommand returns invalid data. """
+    pass
+
+
+class LoguxProxyToManyWrongAuthException(Exception):
+    """ Kind of bruteforce protection. Rises when server got to many wrong auth secrets. """
     pass

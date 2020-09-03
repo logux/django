@@ -11,9 +11,16 @@ from logux import settings
 from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SUBSCRIBE, \
     protocol_version_is_supported
 from logux.dispatchers import logux
-from logux.exceptions import LoguxProxyException
+from logux.exceptions import LoguxProxyException, LoguxProxyToManyWrongAuthException
+from logux.throttling import Throttle
 
 logger = logging.getLogger(__name__)
+
+# TODO: move it to settings
+# drop request if more then 3 successes auth per sec
+LOGUX_AUTH_RATE = 3
+
+default_throttle = Throttle()
 
 
 class LoguxRequest:
@@ -24,8 +31,8 @@ class LoguxRequest:
     By default, command parser will provide only AuthCommand implementation (with logux_auth function
     injection). Other Action should by parsed by consumer dispatcher.
 
-    TODO: send 403 if proxy secret is wrong
-    TODO: send 429 if brute force check is fail
+    TODO: if the proxy secret is wrong send 403
+    TODO: if the brute force check is fail send 429
     """
 
     class CommandType:
@@ -42,6 +49,9 @@ class LoguxRequest:
         :param request: request with command from Logux Proxy
         :raises: base Exception if request protocol version is not supported by backend
         """
+        self.request = request
+        self.throttle = default_throttle
+
         try:
             self._get_body(request)
         except (TypeError, ValueError) as err:
@@ -100,18 +110,26 @@ class LoguxRequest:
 
     def _is_server_authenticated(self) -> bool:
         """ Check Logux proxy server secret """
-        return self.secret == settings.get_config()['CONTROL_SECRET']
+        # FIXME: wrong logic for throttle
+        if self.throttle.allow_request(self.request):
+            return self.secret == settings.get_config()['CONTROL_SECRET']
+
+        raise LoguxProxyToManyWrongAuthException('Too many wrong secrets')
 
     def apply_commands(self) -> Tuple[int, Union[str, LoguxValue]]:
         """ Apply all actions commands one by one
 
         :return: HTTP code and List of command applying results or error message
         """
-        if not self._is_server_authenticated():
-            # TODO: extract to common way to error response
-            err_msg = 'Wrong secret'
-            logger.warning(err_msg)
-            return 403, err_msg
+        try:
+            if not self._is_server_authenticated():
+                # TODO: extract to common way to error response
+                err_msg = 'Wrong secret'
+                logger.warning(err_msg)
+
+                return 403, err_msg
+        except LoguxProxyToManyWrongAuthException as err:
+            return 429, str(err)
 
         if len(self.commands) == 0:
             return 200, [
