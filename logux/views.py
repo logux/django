@@ -57,7 +57,7 @@ class LoguxRequest:
             self._get_body(request)
         except (TypeError, ValueError) as err:
             logger.warning('Wrong body: %s', err)
-            raise LoguxProxyException('Wrong body')
+            raise LoguxProxyException('Wrong body') from err
 
         if not protocol_version_is_supported(self.version):
             logger.warning('Unsupported protocol version: %s', self.version)
