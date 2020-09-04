@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from itertools import chain
 from typing import List, Tuple, Union
 
@@ -117,19 +118,17 @@ class LoguxRequest:
 
         :return: HTTP code and List of command applying results or error message
         """
-        # TODO: refactoring
-        if not self._is_server_authenticated():
-            if self.throttle.allow_request(self.request):
-                err_msg = 'Wrong secret'
-                logger.warning(err_msg)
 
-                # TODO: extract HTTP statuses
-                return 403, err_msg
-
+        if not self.throttle.allow_request(self.request):
             err_msg = 'Too many wrong secret attempts'
             logger.warning(err_msg)
-            # TODO: extract HTTP statuses
             return 429, err_msg
+
+        if not self._is_server_authenticated():
+            self.throttle.remember_bad_auth(when=time.time())
+            err_msg = 'Wrong secret'
+            logger.warning(err_msg)
+            return 403, err_msg
 
         if len(self.commands) == 0:
             return 200, [

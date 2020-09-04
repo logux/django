@@ -16,6 +16,13 @@ if DEBUG:
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+# Internal throttling settings, for bruteforce protection
+# https://github.com/logux/django/issues/6
+THROTTLE = {
+    'NUM_REQUESTS': 3,
+    'DURATION': 1
+}
+
 
 # TODO: find a way how to cache it for prod and do not cache it for tests
 # @lru_cache()
