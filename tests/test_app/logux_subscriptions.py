@@ -20,7 +20,7 @@ class UserChannel(ChannelCommand):
         user, _ = User.objects.get_or_create(id=self.params['user_id'], username='Name')
         return {
             'type': 'users/name',
-            'payload': {'userId': str(user.id), 'name': user.first_name}
+            'payload': {'userId': str(user.id), 'name': user.username}
         }
 
 
