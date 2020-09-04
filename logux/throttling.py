@@ -5,9 +5,7 @@ from django.http import HttpRequest
 
 
 class Throttle:
-    """
-    Rate throttling of requests.
-    """
+    """ Rate throttling of requests. """
     cache = default_cache
     timer = time.time
     key = None
@@ -16,22 +14,18 @@ class Throttle:
     def __init__(self):
         # TODO: move it to settings
         self.num_requests = 3
-        self.duration = 1
+        self.duration = 10
 
     def allow_request(self, request: HttpRequest):
-        """
-        Implement the check to see if the request should be throttled.
-        On success calls `throttle_success`.
-        On failure calls `throttle_failure`.
-        """
+        """ Returns True if request allows passing inside, otherwise False """
 
         self.key = self.get_ident(request)
         if self.key is None:
             return True
 
         self.history = self.cache.get(self.key, [])
-        # noinspection PyAttributeOutsideInit
-        self.now = self.timer()
+        # TODO: don't like it
+        self.now = self.timer()  # noqa
 
         # Drop any requests from the history which have now passed the
         # throttle duration

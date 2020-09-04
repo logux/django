@@ -11,7 +11,7 @@ from logux import settings
 from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SUBSCRIBE, \
     protocol_version_is_supported
 from logux.dispatchers import logux
-from logux.exceptions import LoguxProxyException, LoguxProxyToManyWrongAuthException
+from logux.exceptions import LoguxProxyException
 from logux.throttling import Throttle
 
 logger = logging.getLogger(__name__)
@@ -110,26 +110,26 @@ class LoguxRequest:
 
     def _is_server_authenticated(self) -> bool:
         """ Check Logux proxy server secret """
-        # FIXME: wrong logic for throttle
-        if self.throttle.allow_request(self.request):
-            return self.secret == settings.get_config()['CONTROL_SECRET']
-
-        raise LoguxProxyToManyWrongAuthException('Too many wrong secrets')
+        return self.secret == settings.get_config()['CONTROL_SECRET']
 
     def apply_commands(self) -> Tuple[int, Union[str, LoguxValue]]:
         """ Apply all actions commands one by one
 
         :return: HTTP code and List of command applying results or error message
         """
-        try:
-            if not self._is_server_authenticated():
-                # TODO: extract to common way to error response
+        # TODO: refactoring
+        if not self._is_server_authenticated():
+            if self.throttle.allow_request(self.request):
                 err_msg = 'Wrong secret'
                 logger.warning(err_msg)
 
+                # TODO: extract HTTP statuses
                 return 403, err_msg
-        except LoguxProxyToManyWrongAuthException as err:
-            return 429, str(err)
+
+            err_msg = 'Too many wrong secret attempts'
+            logger.warning(err_msg)
+            # TODO: extract HTTP statuses
+            return 429, err_msg
 
         if len(self.commands) == 0:
             return 200, [
