@@ -49,14 +49,30 @@ class Meta:  # pylint: disable=too-many-instance-attributes
         # Keep in mind, if self._raw_meta will change all properties do not be reassignment,
         #   so, do not change self._raw_meta during Meta instance lifecycle
 
+        # Let's say Meta is
+        # {
+        #   "id": "1564508138460 380:R7BNGAP5:px3-J3oc 0",
+        #   "time": 1
+        # }
+
+        # ["380", "R7BNGAP5", "px3-J3oc"]
         self._uid: List[str] = self._get_uid()
 
+        # "1564508138460 380:R7BNGAP5:px3-J3oc 0"
         self.id: str = self._raw_meta['id']
+        # 0
+        self.counter: int = self._get_counter()
+        # "380:R7BNGAP5:px3-J3oc"
+        self.node: str = self._get_node()
+        # fromtimestamp(1564508138460)
         self.time_from_id = self._get_time_from_id()
-
+        # "380"
         self.user_id: str = self._get_user_id()
+        # "380:R7BNGAP5"
         self.client_id: str = self._get_client_id()
+        # Optional("px3-J3oc"). Note: in Docs node_id is "tab ID"
         self.node_id: Optional[str] = self._get_node_id()
+        # fromtimestamp(1)
         self.time: datetime = self._get_time()
 
         self.subprotocol: str = self._get_subprotocol()
@@ -71,67 +87,69 @@ class Meta:  # pylint: disable=too-many-instance-attributes
         return not self.__eq__(o)
 
     def __lt__(self, other: Meta) -> bool:
+        raise NotImplementedError()
+
+    def __gt__(self, other: Meta) -> bool:
+        raise NotImplementedError()
+
+    def __str__(self):
+        return self.get_json()
+
+    def is_older(self, other: Meta):
         # pylint: disable=no-else-return,too-many-return-statements
-        # <
-        if self.get_raw_meta():
-            if not other.get_raw_meta():
-                return False
-            elif not self.get_raw_meta() and other.get_raw_meta():
-                return True
-        elif not self.get_raw_meta() and other.get_raw_meta():
+        """ To be less confusing, in the method will be implementation
+         from the Node API. Ord arophetoca will work throug this method.
+         For more info, check this out:
+             https://github.com/logux/core/blob/master/is-first-older/index.js
+         """
+        if self.get_raw_meta() and other is None:
+            return False
+        if other.get_raw_meta() and self is None:
             return True
 
         if self.time > other.time:
             return False
-        elif self.time < other.time:
+        if self.time < other.time:
             return True
 
-        if self.id > other.id:
+        # FIXME: need to compare it separately
+        # 1 get the nodes (uid)
+        # 2 get the counters
+        # 3 get the nodes time
+
+        # TODO: Cleanup
+        # "1564508138460 380:R7BNGAP5:px3-J3oc 0"
+        #
+        # 1564508138460: local timestamp on the node, which generate the action.
+        # 380:R7BNGAP5:px3-J3oc: unique ID of node, which generate the action.
+        # 0 is a counter for the case, when node will generate several actions during the same timestamp.
+
+        # node
+        if self.node > other.node:
             return False
-        elif self.id < other.id:
+        if self.node < other.node:
             return True
 
+        # conter
+        if self.counter > other.counter:
+            return False
+        if self.counter < other.counter:
+            return True
+
+        # node time
         if self.time_from_id > other.time_from_id:
             return False
-        elif self.time_from_id < other.time_from_id:
-            return True
-
-        return False
-
-    def __gt__(self, other: Meta) -> bool:
-        # pylint: disable=no-else-return,too-many-return-statements
-        # >
-        if self.get_raw_meta() and not other.get_raw_meta():
-            return True
-        elif not self.get_raw_meta() and other.get_raw_meta():
-            return False
-
-        if self.time < other.time:
-            return False
-        elif self.time > other.time:
-            return True
-
-        if self.id < other.id:
-            return False
-        elif self.id > other.id:
-            return True
-
         if self.time_from_id < other.time_from_id:
-            return False
-        elif self.time_from_id > other.time_from_id:
             return True
 
         return False
-
-    def __str__(self):
-        return self.get_json()
 
     # Helpers
     def _get_uid(self):
         try:
             uid = self._raw_meta['id'].split(' ')[1].split(':')
-        except IndexError:
-            raise ValueError(f'wrong meta id format: {self._raw_meta["id"]}')
+        except IndexError as err:
+            raise ValueError(f'wrong meta id format: {self._raw_meta["id"]}') from err
         return uid
 
     def _get_user_id(self) -> str:
@@ -147,6 +165,20 @@ class Meta:  # pylint: disable=too-many-instance-attributes
          then client_id is '38:Y7bysd'
          """
         return ':'.join(self._uid[:2])
+
+    def _get_node(self) -> str:
+        """ Get node from meta.id.
+        For example, if meta.id is '1560954012838 38:Y7bysd:O0ETfc 0',
+        then node is '38:Y7bysd:O0ETfc'
+        """
+        return ':'.join(self._uid)
+
+    def _get_counter(self) -> int:
+        """ Get counter from meta.id.
+        For example, if meta.id is '1560954012838 38:Y7bysd:O0ETfc 0',
+        then counter is 0
+        """
+        return int(self.id.split(' ')[-1])
 
     def _get_node_id(self) -> Optional[str]:
         """ Get node id from mata.id if exist.
