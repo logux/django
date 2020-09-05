@@ -326,9 +326,9 @@ class AuthCommand(Command):
         try:
             self.auth_id = cmd_body['authId']
             self.user_id = cmd_body['userId']
-        except KeyError:
+        except KeyError as err:
             logger.warning('AUTH command does not contain "authId" or "userId" keys')
-            raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command')
+            raise LoguxBadAuthException('Missing "authId" or "userId" keys in AUTH command') from err
 
         self.token = cmd_body.get('token', None)
 
@@ -336,7 +336,7 @@ class AuthCommand(Command):
             self.subprotocol = Version(cmd_body['subprotocol'])
         except ValueError as err:
             logger.warning('wrong subprotocol format for AUTH command: %s', err)
-            raise LoguxBadAuthException('Wrong subprotocol format for AUTH command: %s' % err)
+            raise LoguxBadAuthException('Wrong subprotocol format for AUTH command: %s' % err) from err
 
         self.cookie = cmd_body.get('cookie', {})
         self.headers = cmd_body.get('headers', {})
@@ -687,10 +687,10 @@ class ChannelCommand(ActionCommand):
                         _action, _meta = action
                         assert isinstance(_action, dict)
                         assert isinstance(_meta, dict)
-                    except (ValueError, AssertionError):
+                    except (ValueError, AssertionError) as err:
                         raise LoguxWrongLoadResultsException("'load' method returns invalid data. It should be "
                                                              "Action or [Action] or [[Action, raw_meta],] where"
-                                                             "Action and rew_meta is Dict[str, Any]")
+                                                             "Action and rew_meta is Dict[str, Any]") from err
                     normalized.append({
                         'answer': self.ANSWER.ACTION,
                         'id': self._meta.id,
