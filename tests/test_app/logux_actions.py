@@ -24,7 +24,7 @@ class RenameUserAction(ActionCommand):
         user = User.objects.get(pk=action['payload']['userId'])
         first_name_meta = json.loads(user.first_name_meta)
 
-        if not first_name_meta or meta > Meta(first_name_meta):
+        if not first_name_meta or Meta(first_name_meta).is_older(meta):
             user.first_name = action['payload']['name']
             user.first_name_meta = meta.get_json()
             user.save()

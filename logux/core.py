@@ -87,10 +87,12 @@ class Meta:  # pylint: disable=too-many-instance-attributes
         return not self.__eq__(o)
 
     def __lt__(self, other: Meta) -> bool:
-        raise NotImplementedError()
+        # self < other
+        return False if other is None or self == other else not self.is_older(other)
 
     def __gt__(self, other: Meta) -> bool:
-        raise NotImplementedError()
+        # self > other
+        return False if other is None or self == other else self.is_older(other)
 
     def __str__(self):
         return self.get_json()
@@ -107,22 +109,11 @@ class Meta:  # pylint: disable=too-many-instance-attributes
         if other.get_raw_meta() and self is None:
             return True
 
+        # real time
         if self.time > other.time:
             return False
         if self.time < other.time:
             return True
-
-        # FIXME: need to compare it separately
-        # 1 get the nodes (uid)
-        # 2 get the counters
-        # 3 get the nodes time
-
-        # TODO: Cleanup
-        # "1564508138460 380:R7BNGAP5:px3-J3oc 0"
-        #
-        # 1564508138460: local timestamp on the node, which generate the action.
-        # 380:R7BNGAP5:px3-J3oc: unique ID of node, which generate the action.
-        # 0 is a counter for the case, when node will generate several actions during the same timestamp.
 
         # node
         if self.node > other.node:
@@ -130,7 +121,7 @@ class Meta:  # pylint: disable=too-many-instance-attributes
         if self.node < other.node:
             return True
 
-        # conter
+        # counter
         if self.counter > other.counter:
             return False
         if self.counter < other.counter:
