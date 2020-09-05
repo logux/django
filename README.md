@@ -12,7 +12,7 @@ Django [Logux](https://logux.io/) integration engine.
 * **[Projects](https://logux.io/guide/architecture/parts/)**
   inside Logux ecosystem
 
-![Logux Proto](https://img.shields.io/badge/logux%20protocol-3(4RC)-brightgreen)
+![Logux Proto](https://img.shields.io/badge/logux%20protocol-4-brightgreen)
 [![PyPI version](https://badge.fury.io/py/logux-django.svg)](https://badge.fury.io/py/logux-django)
 ![Travis CI](https://travis-ci.org/logux/django.svg?branch=master)
 ![Lint and Test](https://github.com/logux/django/workflows/Lint%20and%20Test/badge.svg)
@@ -84,7 +84,8 @@ from logux.exceptions import LoguxProxyException
 from tests.test_app.models import User
 
 class RenameUserAction(ActionCommand):
-
+    """ During the subscription to users/USER_ID channel sends { type: "users/name", payload: { userId, name } }
+    action with the latest user’s name. """
     action_type = 'users/name'
 
     def resend(self, action: Action, meta: Optional[Meta]) -> List[str]:
@@ -99,7 +100,7 @@ class RenameUserAction(ActionCommand):
         user = User.objects.get(pk=action['payload']['userId'])
         first_name_meta = json.loads(user.first_name_meta)
 
-        if not first_name_meta or meta > Meta(first_name_meta):
+        if not first_name_meta or Meta(first_name_meta).is_older(meta):
             user.first_name = action['payload']['name']
             user.first_name_meta = meta.get_json()
             user.save()
@@ -134,7 +135,7 @@ from tests.test_app.models import User
 class UserChannel(ChannelCommand):
 
     channel_pattern = r'^users/(?P<user_id>\w+)$'
-
+    
     def access(self, action: Action, meta: Optional[Meta]) -> bool:
         return self.params['user_id'] == meta.user_id
 
@@ -142,7 +143,10 @@ class UserChannel(ChannelCommand):
         if 'error' in self.headers:
             raise LoguxProxyException(self.headers['error'])
 
-        user, _ = User.objects.get_or_create(id=self.params['user_id'], username='Name')
+        user, created = User.objects.get_or_create(id=self.params['user_id'])
+        if created:
+            user.first_name = 'Name'
+
         return {
             'type': 'users/name',
             'payload': {'userId': str(user.id), 'name': user.first_name}
