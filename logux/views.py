@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from itertools import chain
 from typing import List, Tuple, Union
 
@@ -12,8 +13,15 @@ from logux.core import AuthCommand, LoguxValue, UnknownAction, Command, LOGUX_SU
     protocol_version_is_supported
 from logux.dispatchers import logux
 from logux.exceptions import LoguxProxyException
+from logux.throttling import Throttle
 
 logger = logging.getLogger(__name__)
+
+# TODO: move it to settings
+# drop request if more then 3 successes auth per sec
+LOGUX_AUTH_RATE = 3
+
+default_throttle = Throttle()
 
 
 class LoguxRequest:
@@ -24,8 +32,8 @@ class LoguxRequest:
     By default, command parser will provide only AuthCommand implementation (with logux_auth function
     injection). Other Action should by parsed by consumer dispatcher.
 
-    TODO: send 403 if proxy secret is wrong
-    TODO: send 429 if brute force check is fail
+    TODO: if the proxy secret is wrong send 403
+    TODO: if the brute force check is fail send 429
     """
 
     class CommandType:
@@ -42,11 +50,14 @@ class LoguxRequest:
         :param request: request with command from Logux Proxy
         :raises: base Exception if request protocol version is not supported by backend
         """
+        self.request = request
+        self.throttle = default_throttle
+
         try:
             self._get_body(request)
         except (TypeError, ValueError) as err:
             logger.warning('Wrong body: %s', err)
-            raise LoguxProxyException('Wrong body')
+            raise LoguxProxyException('Wrong body') from err
 
         if not protocol_version_is_supported(self.version):
             logger.warning('Unsupported protocol version: %s', self.version)
@@ -107,8 +118,14 @@ class LoguxRequest:
 
         :return: HTTP code and List of command applying results or error message
         """
+
+        if not self.throttle.allow_request(self.request):
+            err_msg = 'Too many wrong secret attempts'
+            logger.warning(err_msg)
+            return 429, err_msg
+
         if not self._is_server_authenticated():
-            # TODO: extract to common way to error response
+            self.throttle.remember_bad_auth(when=time.time())
             err_msg = 'Wrong secret'
             logger.warning(err_msg)
             return 403, err_msg

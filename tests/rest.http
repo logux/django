@@ -72,7 +72,7 @@ Content-Type: application/json
             "authId": "gf4Ygi6grYZYDH5Z2BsoR",
             "userId": "38",
             "token": "good-token",
-            "subprotocol": "2.1.2"
+            "subprotocol": "1.0.0"
         }
     ]
 }
