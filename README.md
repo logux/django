@@ -136,7 +136,7 @@ class UserChannel(ChannelCommand):
 
     channel_pattern = r'^users/(?P<user_id>\w+)$'
     
-    def access(self, action: Action, meta: Optional[Meta]) -> bool:
+    def access(self, action: Action, meta: Meta) -> bool:
         return self.params['user_id'] == meta.user_id
 
     def load(self, action: Action, meta: Meta) -> Action:
