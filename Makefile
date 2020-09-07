@@ -40,9 +40,8 @@ integration_test:  ## Up Django backend and run backend-test
 	rm -f test_result.tmp django.PID
 
 integration_test_ci:  ## Up Django backend and run backend-test
-	export PYTHONPATH=$PYTHONPATH:$(pwd)
-	python tests/manage.py migrate && python tests/manage.py wipe_db
-	python tests/manage.py runserver --settings=tests.test_project.test_settings & echo $$! > django.PID
+	export PYTHONPATH=$PYTHONPATH:$(pwd) && python tests/manage.py migrate && python tests/manage.py wipe_db
+	export PYTHONPATH=$PYTHONPATH:$(pwd) && python tests/manage.py runserver --settings=tests.test_project.test_settings & echo $$! > django.PID
 	sleep 3
 	cd tests/lbt && npx @logux/backend-test http://localhost:8000/logux/ || echo "FAIL" > ../test_result.tmp
 
