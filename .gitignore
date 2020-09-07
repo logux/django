@@ -134,3 +134,7 @@ dmypy.json
 # PIDs
 *.PID
 *.pid
+
+/tests/lbt/*
+!/tests/lbt/package.json
+!/tests/lbt/README.md

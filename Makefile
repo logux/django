@@ -20,13 +20,16 @@ lint:  ## Lint and static-check code
 	mypy logux
 
 lbt:  ## Run logux-backend integration tests
-	cd lbt && npx @logux/backend-test http://localhost:8000/logux/
+	cd tests/lbt && npx @logux/backend-test http://localhost:8000/logux/
+
+lbt_deps:  ## Install @logux/backend-test from NPM
+	cd tests/lbt && npm install
 
 integration_test:  ## Up Django backend and run backend-test
 	./env/bin/python tests/manage.py migrate && ./env/bin/python tests/manage.py wipe_db
 	./env/bin/python tests/manage.py runserver --settings=tests.test_project.test_settings & echo $$! > django.PID
 	sleep 3
-	cd lbt && npx @logux/backend-test http://localhost:8000/logux/ || echo "FAIL" > ../test_result.tmp
+	cd tests/lbt && npx @logux/backend-test http://localhost:8000/logux/ || echo "FAIL" > ../test_result.tmp
 
 	if [ -a test_result.tmp ]; then \
 		kill -TERM $$(cat django.PID); \
