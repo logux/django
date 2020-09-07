@@ -43,4 +43,4 @@ jobs:
         -   name: Install Node and logux-backend tests deps
             run: |
                 make lbt_deps
-                make integration_test
+                make integration_test_ci

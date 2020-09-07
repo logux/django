@@ -39,6 +39,21 @@ integration_test:  ## Up Django backend and run backend-test
 	kill -TERM $$(cat django.PID)
 	rm -f test_result.tmp django.PID
 
+integration_test_ci:  ## Up Django backend and run backend-test
+	export PYTHONPATH=$PYTHONPATH:$(pwd)
+	python tests/manage.py migrate && python tests/manage.py wipe_db
+	python tests/manage.py runserver --settings=tests.test_project.test_settings & echo $$! > django.PID
+	sleep 3
+	cd tests/lbt && npx @logux/backend-test http://localhost:8000/logux/ || echo "FAIL" > ../test_result.tmp
+
+	if [ -a test_result.tmp ]; then \
+		kill -TERM $$(cat django.PID); \
+		rm -f test_result.tmp django.PID && exit 1; \
+	fi;
+
+	kill -TERM $$(cat django.PID)
+	rm -f test_result.tmp django.PID
+
 test:  ## Run tests (venv)
 	./env/bin/python tests/manage.py test test_app
 
