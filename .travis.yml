@@ -2,6 +2,7 @@ language: python
 python:
   - '3.7'
   - '3.8'
+node_js: "0.14"
 env:
   - DJANGO_VERSION=2.2
   - DJANGO_VERSION=3.0
@@ -10,6 +11,8 @@ install:
   - make deps
   - pip install -q Django==$DJANGO_VERSION
   - python setup.py -q install
+  - make lbt_deps
 script:
   - make lint
   - make ci_test
+  - make integration_test_ci
