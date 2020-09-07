@@ -1,1 +1,3 @@
-TODO: What is it all about? 
+# lbt - logux backend-test
+
+Integration tests for Logux servers: https://github.com/logux/backend-test
