@@ -2,7 +2,7 @@
     Django Logux integration engine: https://logux.io
 """
 __title__ = 'Django Logux integration engine'
-__version__ = "2.0.0rc5"
+__version__ = "2.0"
 __author__ = 'Vadim Iskuchekov @egregors'
 __license__ = 'MIT License'
 
