@@ -189,7 +189,14 @@ Test:
 make test
 ```
 
-Integration tests (up server and run [backend-test](https://github.com/logux/backend-test)):
+Integration tests (up server and run [backend-test](https://github.com/logux/backend-test)).
+
+Install [backend-test](https://github.com/logux/backend-test) deps:
+```shell script
+make lbt_deps
+```
+
+Run integration tests
 ```shell script
 make integration_test
 ```
