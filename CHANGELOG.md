@@ -1,3 +1,55 @@
+#  (2020-09-08)
+
+
+### Bug Fixes
+
+* add .is_older method for Meta (like in the Node API). Tests. ([bb66689](https://github.com/logux/django/commit/bb66689e0577051de800476d00219baa8c0b3a6a))
+* add .is_older method for Meta (like in the Node API). Tests. ([9eb0c71](https://github.com/logux/django/commit/9eb0c7181c04e218c4a59be1336b51bd6ea9a373))
+* add `raise from` for all reraised exceptions ([b325166](https://github.com/logux/django/commit/b3251662ab02c048590ea5592b97260c21e05a5b))
+* add test app init migration ([a3c9e25](https://github.com/logux/django/commit/a3c9e256cd12b1805b7ae1ff735b1450a4515d20))
+* apply_commands types ([e6ff52d](https://github.com/logux/django/commit/e6ff52dd60ecc2f644ef8009006f17180c10773b))
+* call resend with named args, close [#42](https://github.com/logux/django/issues/42) ([24e0de0](https://github.com/logux/django/commit/24e0de00bf0e6105899381c2c0a61fbc87ca731c))
+* change "stack" field to "details", tests. ([0ed4804](https://github.com/logux/django/commit/0ed480456c16ccfb41474b53eb12cf03923476ed))
+* channel_pattern type ([480651e](https://github.com/logux/django/commit/480651e9fe86c89cf7fd8d42d8edbf4acfbeb1d9))
+* checks version ([cf7efac](https://github.com/logux/django/commit/cf7efac7d1114386289ce0283fc0331982bbd4ab))
+* dispatch proto4 support, test unknownAction ([09bb4da](https://github.com/logux/django/commit/09bb4dacf959887f5b904ef718de7174ce9f0263))
+* django security fixes ([c1148bb](https://github.com/logux/django/commit/c1148bba8bcc158076d41f17b1f94412dfcb7651))
+* forbidden answer for sub action ([b01138d](https://github.com/logux/django/commit/b01138d49025126e9f8f412ccc1cf15765e881d1))
+* github actions typos ([0f66cc2](https://github.com/logux/django/commit/0f66cc211b0d80a3eb9abca3ec727f73c3914a63))
+* missing docstring ([4e93947](https://github.com/logux/django/commit/4e939477bed0ccf66a45a23b855cbe3672cc99a7))
+* mypy as django-stubs dep ([b88f85f](https://github.com/logux/django/commit/b88f85ff8226bc29464107e4ac25215ccdd8b3fd))
+* pylint satisfaction ([c28c160](https://github.com/logux/django/commit/c28c16018aa2568013c48b982fb0fcef4c91b607))
+* remove headers arg from Actions callbacks. close [#43](https://github.com/logux/django/issues/43) ([d529198](https://github.com/logux/django/commit/d5291981beea9578ad0bb62a86b07c14424e784d))
+* reset test app migration ([0c28303](https://github.com/logux/django/commit/0c283037fb8167550191023e9456debda5873eca))
+* test refactoring, cleanup ([a216c90](https://github.com/logux/django/commit/a216c90e1ae2769c24d99b64165359845d692fb4))
+* tests types ([f7cf769](https://github.com/logux/django/commit/f7cf769c5dadc84af00f89ea0d7e1740ad39fcb1))
+* token from cookie, cleanup. answer types extracting. rest tests. ([e7e2bfa](https://github.com/logux/django/commit/e7e2bfa9ed27dde684f805566bf77159f864d2c8))
+* unsupported subprotocol format ([0004bec](https://github.com/logux/django/commit/0004beccbd9c948a362698fc18fd5ea78241b780))
+* UserChannel action (wrong username property) ([686bf1c](https://github.com/logux/django/commit/686bf1c1c8a9295850fd37b55a9689850f2b2f31))
+* wrong logic for throttle ([1aad7f9](https://github.com/logux/django/commit/1aad7f93c990b9a8bdeb58da39bbfb2520344061))
+
+
+### Features
+
+* ActionCommand support for proto4 ([11a8340](https://github.com/logux/django/commit/11a83408a41ed0c082f4b9ceb227102f339f18d7))
+* add 'headers' for action callbacks ([5fcbe6e](https://github.com/logux/django/commit/5fcbe6edec779a21f0af86a36e30b08337e118c9))
+* add semantic_version pkg for subprotocols processing ([64f0f75](https://github.com/logux/django/commit/64f0f75853c7debe0ab32a0b1eb2c8e839059215))
+* base implementation of bruteforce protection (throttle class) ([006bbc7](https://github.com/logux/django/commit/006bbc7b69c01af59d2fab94b739639f9214a82a))
+* bruteforce protection, logux internal settings update ([cbc63fb](https://github.com/logux/django/commit/cbc63fb419e702229df53f9f9479c0f7e08c9f98))
+* django >=2.2, <4 support ([a295163](https://github.com/logux/django/commit/a295163b6d5f1cc1a1e341633618879eecdffc7f))
+* load multi type return support, resolved [#35](https://github.com/logux/django/issues/35) ([45ffeec](https://github.com/logux/django/commit/45ffeec72a4c000f70c57b9ec17274c6721de1ed))
+* logux_add support for proto4 ([d2c26c1](https://github.com/logux/django/commit/d2c26c1f2bef259fa950d08f3464b6694bf21126))
+* make cmd for running "logux backend tests" ([71142e5](https://github.com/logux/django/commit/71142e5a583d89bfb571a99041244f70e1f9b36b))
+* new auth_func signature. ([c08fdb2](https://github.com/logux/django/commit/c08fdb24d1064073339847c059c09d607cacd5cb))
+* new settings format, auth cmd, tests, readme update ([ae6cd66](https://github.com/logux/django/commit/ae6cd665a72900995fbae643bd93c41851b8abf3))
+* proto4 auth support. ([f9c2067](https://github.com/logux/django/commit/f9c2067868b053b1c203afd5ed0b96fa2f37d7d5))
+* require_http_methods for logux url ([b8e3cfb](https://github.com/logux/django/commit/b8e3cfb0feb36eadb68cddbadea9a11442e1d76d))
+* return actions from channel. resolved [#35](https://github.com/logux/django/issues/35) ([098afaa](https://github.com/logux/django/commit/098afaad2cbc7613f941e0c5f999bc4927011111))
+* SubCommand support for proto4, errors. Mypy. ([4542c73](https://github.com/logux/django/commit/4542c732da3443a3140873ea69c11d9a72e87e84))
+* subprotocols support, wrongSubprotocol answer ([99acab8](https://github.com/logux/django/commit/99acab8284e0f6a30ffa170d30bb2cfb16d0a335))
+
+
+
 #  (2020-08-05)
 
 
