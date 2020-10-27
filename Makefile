@@ -73,7 +73,7 @@ changelog:  ## Generate changelog
 	conventional-changelog -p angular -i CHANGELOG.md -s
 
 docs:  ## Run auto-docs build
-	. env/bin/activate && make install && pip install sphinx && cd docs && make clean && make html
+	. env/bin/activate && make install && pip install sphinx && cd docs && make clean && make xml
 
 ## Release
 
