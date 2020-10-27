@@ -10,7 +10,7 @@ install:  ## Install this pkg by setup.py (venv)
 	env/bin/pip install -e .
 
 deps:  ## Install dev dependencies (global)
-	pip install black coverage flake8 mccabe django-stubs pylint
+	pip install black coverage flake8 mccabe django-stubs pylint sphinx
 
 ## Code quality
 
@@ -73,7 +73,7 @@ changelog:  ## Generate changelog
 	conventional-changelog -p angular -i CHANGELOG.md -s
 
 docs:  ## Run auto-docs build
-	. env/bin/activate && cd docs && make clean && make html
+	. env/bin/activate && make install && pip install sphinx && cd docs && make clean && make html
 
 ## Release
 
