@@ -4,13 +4,10 @@
 ## Init
 
 install:  ## Install this pkg in editable (develop) mode
-	#env/bin/pip install -e .
-	dephell --version
 	poetry run dephell --version
-	dephell project register --from=pyproject .
+	poetry run dephell project register --from=pyproject .
 
 deps:  ## Install dev dependencies (global)
-	#pip install black coverage flake8 mccabe django-stubs pylint sphinx
 	poetry install
 
 ## Code quality
@@ -55,7 +52,6 @@ integration_test_ci:  ## Up Django backend and run backend-test
 	rm -f test_result.tmp django.PID
 
 test:  ## Run tests (venv)
-	#./env/bin/python tests/manage.py test test_app
 	poetry run tests/manage.py test test_app
 
 ci_test:  ## Run tests inside CI ENV
@@ -64,34 +60,31 @@ ci_test:  ## Run tests inside CI ENV
 ## Run
 
 run:  ## Run local dev server (venv)
-	#./env/bin/python tests/manage.py runserver
 	poetry run tests/manage.py runserver
 
-build: clean test lint  ## Build package
-	#python3 setup.py sdist bdist_wheel
-	#python3 -m twine check dist/*
-	poetry build -f sdist
+build: clean test lint setup  ## Build package
+	poetry build
 
 changelog:  ## Generate changelog
 	conventional-changelog -p angular -i CHANGELOG.md -s
 
 docs:  ## Run auto-docs build
-	#. env/bin/activate && make install && pip install sphinx && cd docs && make clean && make xml
 	cd docs && poetry run make clean && poetry run make xml
 
 ## Release
 
 release_test: build  ## Release package on test PyPI server
-	poetry run python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+	poetry config repositories.test https://test.pypi.org/legacy/
+	poetry publish -r test
 
 release_production: build  ## Release package on PyPI server
-	poetry run python -m twine upload dist/*
+	poetry publish
 
 setup:  ## Convert pyproject to setup.py
 	dephell deps convert
 
 clean:  ## Remove cache
-	rm -rf ./dist ./build ./logux_django.egg-info
+	rm -rf ./dist ./build ./logux_django.egg-info ./README.rst
 
 ## Help
 
