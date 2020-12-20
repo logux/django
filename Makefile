@@ -4,7 +4,6 @@
 ## Init
 
 install:  ## Install this pkg in editable (develop) mode
-	poetry run dephell --version
 	poetry run dephell project register --from=pyproject .
 
 deps:  ## Install dev dependencies (global)
