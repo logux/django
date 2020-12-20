@@ -42,6 +42,7 @@ django-stubs = "^1.7.0"
 pylint = "^2.6.0"
 Sphinx = "^3.4.0"
 twine = "^3.2.0"
+dephell = "^0.8.3"
 
 [build-system]
 requires = [
