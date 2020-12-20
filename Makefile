@@ -5,6 +5,7 @@
 
 install:  ## Install this pkg in editable (develop) mode
 	#env/bin/pip install -e .
+	poetry run dephell --version
 	poetry run dephell project register --from=pyproject .
 
 deps:  ## Install dev dependencies (global)
