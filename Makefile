@@ -5,8 +5,8 @@
 
 install:  ## Install this pkg in editable (develop) mode
 	#env/bin/pip install -e .
-	poetry run dephell --version
-	poetry run dephell project register --from=pyproject .
+	dephell --version
+	dephell project register --from=pyproject .
 
 deps:  ## Install dev dependencies (global)
 	#pip install black coverage flake8 mccabe django-stubs pylint sphinx
