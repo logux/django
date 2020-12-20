@@ -2,12 +2,10 @@
     Django Logux integration engine: https://logux.io
 """
 __title__ = 'Django Logux integration engine'
-__version__ = "2.0"
 __author__ = 'Vadim Iskuchekov @egregors'
 __license__ = 'MIT License'
 
 # Synonyms
-VERSION = __version__
 AUTHOR = __author__
 
 # Logux protocol version: https://logux.io/protocols/ws/spec/
