@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: venv install deps run test ci_test build release clean release_test release_production lint lbt docs
+.PHONY: install deps run test ci_test build release clean release_test release_production lint lbt docs setup
 
 ## Init
 
@@ -84,6 +84,9 @@ release_test: build  ## Release package on test PyPI server
 
 release_production: build  ## Release package on PyPI server
 	poetry run python -m twine upload dist/*
+
+setup:  ## Convert pyproject to setup.py
+	dephell deps convert
 
 clean:  ## Remove cache
 	rm -rf ./dist ./build ./logux_django.egg-info

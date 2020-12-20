@@ -15,32 +15,34 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
-        django-version: [2.2, 3.0, 3.1]
+        python-version: [ 3.7, 3.8, 3.9 ]
+        django-version: [ 2.2, 3.0, 3.1 ]
       fail-fast: false
 
     steps:
-        -   uses: actions/checkout@v2
-        -   name: Set up Python ${{ matrix.python-version }}
-            uses: actions/setup-python@v1
-            with:
-                python-version: ${{ matrix.python-version }}
-        -   name: Install dependencies with ${{ matrix.django-version }}
-            run: |
-                python -m pip install --upgrade pip
-                make deps
-                python -m pip install Django==${{ matrix.django-version }}
-                python setup.py install
-        -   name: Lint with flake8, pylint and mypy
-            run: |
-                make lint
-        -   name: Test
-            run: |
-                make ci_test
-        -   uses: actions/setup-node@v1
-            with:
-                node-version: '14'
-        -   name: Install Node and logux-backend tests deps
-            run: |
-                make lbt_deps
-                make integration_test_ci
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies for Django-${{ matrix.django-version }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install
+          python -m pip install Django==${{ matrix.django-version }}
+          make install
+      - name: Lint with flake8, pylint and mypy
+        run: |
+          make lint
+      - name: Test
+        run: |
+          make ci_test
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14'
+      - name: Install Node and logux-backend tests deps
+        run: |
+          make lbt_deps
+          make integration_test_ci
