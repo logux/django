@@ -172,9 +172,11 @@ For more information: https://logux.io/node-api/#log-add
 
 ## Development
 
-Create dev environment
+We use [Poetry](https://python-poetry.org/) and [dephell](https://github.com/dephell/dephell) for dealing with deps.
+
+Create dev environment, setup logux in develop mode, run local test server
 ```shell script
-make venv
+make deps
 make install
 make run
 ```
