@@ -1,15 +1,14 @@
 # Logux Django
 
 <img align="right" width="95" height="148" title="Logux logotype"
-     src="https://logux.io/branding/logotype.svg">
+     src="https://logux.org/branding/logotype.svg">
 
-Django [Logux](https://logux.io/) integration engine.
+Django [Logux](https://logux.org/) integration engine.
 
-* **[Guide, recipes, and API](https://logux.io/)**
-* **[Chat](https://gitter.im/logux/logux)** for any questions
+* **[Guide, recipes, and API](https://logux.org/)**
 * **[Issues](https://github.com/logux/logux/issues)**
   and **[roadmap](https://github.com/orgs/logux/projects/1)**
-* **[Projects](https://logux.io/guide/architecture/parts/)**
+* **[Projects](https://logux.org/guide/architecture/parts/)**
   inside Logux ecosystem
 
 ![Logux Proto](https://img.shields.io/badge/logux%20protocol-4-brightgreen)
@@ -33,7 +32,7 @@ Add `path(r'logux/', include('logux.urls')),` into your `urls.py`
 
 Sets Logux settings in your `settings.py`:
 ```python
-# Logux settings: https://logux.io/guide/starting/proxy-server/
+# Logux settings: https://logux.org/guide/starting/proxy-server/
 LOGUX_CONFIG = {
     'URL': 'http://localhost:31337/',
     'CONTROL_SECRET': 'parole',
@@ -49,7 +48,7 @@ For urls and settings examples, please checkout `test_app`
 [settings](https://github.com/logux/django/blob/master/tests/test_project/settings.py)
 
 Keep in mind: the path in your `urls.py` (`logux/`) and the `LOGUX_CONTROL_SECRET` from the settings should be passed 
-into [Logux Server](https://logux.io/guide/starting/proxy-server/#creating-the-project) by ENV as 
+into [Logux Server](https://logux.org/guide/starting/proxy-server/#creating-the-project) by ENV as 
 `LOGUX_BACKEND` and `LOGUX_CONTROL_SECRET` respectively. 
 
 For example: 
@@ -168,7 +167,7 @@ If `raw_meta` is `None` just empty Dict will be passed to Logux server.
 
 Keep in mind, in the current version `logux_add` is sync.
 
-For more information: https://logux.io/node-api/#log-add
+For more information: https://logux.org/node-api/#log-add
 
 ## Development
 
