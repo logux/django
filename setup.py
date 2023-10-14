@@ -25,7 +25,7 @@ setup(
     long_description=readme,
     name='logux_django',
     version='2.0',
-    description='Django Logux integration engine https://logux.io/',
+    description='Django Logux integration engine https://logux.org/',
     python_requires='<4,==3.*,>=3.7.0',
     project_urls={"homepage": "https://github.com/logux/django/"},
     author='Vadim Iskuchekov',

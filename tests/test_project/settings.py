@@ -123,7 +123,7 @@ STATIC_URL = '/static/'
 AUTH_USER_MODEL = 'test_app.User'
 
 
-# Logux settings: https://logux.io/guide/starting/proxy-server/
+# Logux settings: https://logux.org/guide/starting/proxy-server/
 def auth_func(user_id: str, token: str, cookie: dict, headers: dict) -> bool:
     """ Custom AUTH functions to pass https://github.com/logux/backend-test """
     err = headers.pop('error', None)

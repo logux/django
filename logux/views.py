@@ -38,7 +38,7 @@ class LoguxRequest:
 
     class CommandType:
         """ All possible Logux command types.
-        https://logux.io/protocols/backend/spec/#requests """
+        https://logux.org/protocols/backend/spec/#requests """
         AUTH = 'auth'
         ACTION = 'action'
 

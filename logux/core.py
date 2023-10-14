@@ -38,7 +38,7 @@ def protocol_version_is_supported(version: int) -> bool:
 
 
 class Meta:  # pylint: disable=too-many-instance-attributes
-    """ Logux meta: https://logux.io/guide/concepts/meta/
+    """ Logux meta: https://logux.org/guide/concepts/meta/
     TODO: add docs about comp:
       https://github.com/logux/django/issues/12#issuecomment-612394901
     """
@@ -214,7 +214,7 @@ def logux_add(action: Action, raw_meta: Optional[Dict] = None) -> None:
 
     Keep in mind, in the current version `logux_add` is sync.
 
-    For more information: https://logux.io/node-api/#log-add
+    For more information: https://logux.org/node-api/#log-add
 
     :param action: action dict
     :param raw_meta: meta dict (not Meta instance)
@@ -446,7 +446,7 @@ class ActionCommand(Command):
 
     def send_back(self, action: Action, raw_meta: Optional[Dict] = None) -> None:
         """ Sand action with meta back to Logux. Will add `clients` from original action to the meta.
-        For more information: https://logux.io/guide/concepts/action/#adding-actions-on-the-server
+        For more information: https://logux.org/guide/concepts/action/#adding-actions-on-the-server
 
         :param action: any logux action
         :type action: Action
@@ -457,7 +457,7 @@ class ActionCommand(Command):
         logux_add(action, {'clients': [self.meta.client_id], **raw_meta})
 
     def undo(self, reason: Optional[str] = 'error', extra: Optional[Dict] = None):
-        """ Logux undo action. https://logux.io/guide/concepts/action/#loguxundo
+        """ Logux undo action. https://logux.org/guide/concepts/action/#loguxundo
 
         :param reason: describes the reason for reverting
         :type reason: str
@@ -528,7 +528,7 @@ class ActionCommand(Command):
         {'channels': ['users/38']}
         and may content fields: channels, users, nodes, clients.
 
-        For more information: https://logux.io/node-api/#resend
+        For more information: https://logux.org/node-api/#resend
 
         :param action: logux action
         :type action: Action
@@ -628,7 +628,7 @@ class ActionCommand(Command):
 class ChannelCommand(ActionCommand):
     """ Logux Subscribe Action Command provide way to handle subscription actions from Logux Proxy.
 
-    For more information: https://logux.io/protocols/backend/examples/#subscription
+    For more information: https://logux.org/protocols/backend/examples/#subscription
 
     Subscription actions should look like:
     [
