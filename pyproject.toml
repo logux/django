@@ -3,7 +3,7 @@ version = "2.0"
 
 name = "logux_django"
 homepage = "https://github.com/logux/django/"
-description = "Django Logux integration engine https://logux.io/"
+description = "Django Logux integration engine https://logux.org/"
 
 license = "MIT"
 

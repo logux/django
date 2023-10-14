@@ -1,11 +1,11 @@
 #
 # List of test requests from the Logux Proxy server to the Django backend.
-# Most of them taked from doc's: https://logux.io/protocols/backend/examples/
+# Most of them taked from doc's: https://logux.org/protocols/backend/examples/
 #
 # All of them are for the version 2
 
 # ###
-# Proxy Server auth: https://logux.io/protocols/backend/spec/#requests
+# Proxy Server auth: https://logux.org/protocols/backend/spec/#requests
 #
 
 # Proxy Server auth with correct secret.
@@ -56,7 +56,7 @@ Content-Type: application/json
 ###
 
 # ###
-# "Auth" command: https://logux.io/protocols/backend/spec/#requests
+# "Auth" command: https://logux.org/protocols/backend/spec/#requests
 #
 
 # "auth" command -> authenticated (tests/test_project/settings.py:122) for token as cmd kay
@@ -138,7 +138,7 @@ Content-Type: application/json
 ###
 
 # ###
-# "Action" command: https://logux.io/protocols/backend/spec/#requests
+# "Action" command: https://logux.org/protocols/backend/spec/#requests
 #
 
 # "action" command -> authenticated + user rename (tests/test_project/settings.py:122)
